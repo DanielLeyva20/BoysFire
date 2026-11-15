@@ -1,0 +1,41 @@
+<table class="ledger">
+  <thead>
+    <tr>
+      <th scope="col" class="w-6">N.º</th>
+      <th scope="col">Región</th>
+      <th scope="col" class="num">Índice</th>
+      <th scope="col" class="num">Días críticos</th>
+      <th scope="col" class="num">Día pico</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of rows(); track row.region.id; let position = $index) {
+      <tr data-interactive tabindex="0"
+          [attr.aria-label]="'Ver ' + row.region.name"
+          (click)="regionSelect.emit(row.region.id)"
+          (keydown.enter)="regionSelect.emit(row.region.id)">
+        <td class="num text-ink-3">{{ position + 1 }}</td>
+        <td class="w-full">
+          <span class="font-semibold">{{ row.region.name }}</span>
+          <span class="mt-1 flex h-1.5" aria-hidden="true">
+            <span class="bg-ink" [style.width.%]="row.detectedWidth"></span>
+            <span class="hatch text-ink-2" [style.width.%]="row.backgroundWidth"></span>
+          </span>
+        </td>
+        <td class="num font-semibold">{{ formatIndex(row.activity.harmonizedIndex) }}</td>
+        <td class="num">{{ formatInteger(row.activity.criticalDays) }}</td>
+        <td class="num whitespace-nowrap">
+          <button type="button" class="underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+                  [attr.aria-label]="'Ver el día pico de ' + row.region.name"
+                  (click)="selectPeak($event, row.activity.peakDate)">
+            {{ row.peakLabel }}
+          </button>
+        </td>
+      </tr>
+    } @empty {
+      <tr>
+        <td colspan="5" class="py-4 text-ink-2">No hay actividad registrada en este período.</td>
+      </tr>
+    }
+  </tbody>
+</table>

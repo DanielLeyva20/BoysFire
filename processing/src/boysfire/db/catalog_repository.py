@@ -5,19 +5,14 @@ from enum import IntEnum
 
 import pyodbc
 
-from boysfire.domain.catalogs import (
-    COUNTRY_REGION_CODE,
-    ConfidenceLevel,
-    Satellite,
-    Sensor,
-    SourceGroup,
-)
+from boysfire.domain.catalogs import ConfidenceLevel, RegionLevel, Satellite, Sensor, SourceGroup
 
 _CATALOGS: tuple[tuple[str, str, type[IntEnum]], ...] = (
     ("ref.sensor", "sensor_id", Sensor),
     ("ref.satellite", "satellite_id", Satellite),
     ("ref.confidence_level", "confidence_level_id", ConfidenceLevel),
     ("ref.source_group", "source_group_id", SourceGroup),
+    ("ref.region_level", "region_level_id", RegionLevel),
 )
 
 
@@ -40,14 +35,3 @@ class CatalogRepository:
                     )
         finally:
             cursor.close()
-
-    def country_region_id(self) -> int:
-        cursor = self._connection.cursor()
-        try:
-            cursor.execute("SELECT region_id FROM ref.region WHERE code = ?", COUNTRY_REGION_CODE)
-            row = cursor.fetchone()
-        finally:
-            cursor.close()
-        if row is None:
-            raise RuntimeError(f"No existe la región país '{COUNTRY_REGION_CODE}' en ref.region.")
-        return int(row[0])

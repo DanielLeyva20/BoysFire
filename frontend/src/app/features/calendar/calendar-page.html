@@ -1,0 +1,113 @@
+<div class="mx-auto w-full max-w-[88rem] px-4 py-6 lg:px-8 lg:py-8">
+  <h1 class="type-wide text-2xl leading-tight font-extrabold uppercase">Calendario de {{ selection.regionName() }}</h1>
+  <p class="mt-2 max-w-[70ch] text-ink-2">
+    Cada fila es un año y cada columna un día. La temporada de quemas se repite en la misma franja, entre julio y
+    octubre. Toca cualquier día para abrirlo en el mapa.
+  </p>
+
+  <section class="mt-6" aria-labelledby="matriz-titulo">
+    <div class="mb-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+      <h2 id="matriz-titulo" class="section-title">Todos los años, día por día</h2>
+      <app-level-legend [labels]="dayLabels" />
+    </div>
+    <div class="border-y-[1.5px] border-ink py-2" [class.opacity-60]="loading()">
+      @if (days().length > 0) {
+        <app-year-matrix
+          [days]="days()"
+          [selectedYear]="selection.year()"
+          [selectedDate]="selection.date()"
+          (daySelect)="openOnMap($event)" />
+      } @else {
+        <div class="skeleton h-96" aria-hidden="true"></div>
+      }
+    </div>
+    <p class="mt-2 text-[0.8125rem] text-ink-2">
+      El color compara cada día con lo normal para esa fecha en esta región. Los espacios en blanco son días sin
+      observación de ningún satélite, no días sin fuego.
+    </p>
+  </section>
+
+  <div class="mt-10 grid grid-cols-[minmax(0,1fr)] gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <section aria-labelledby="extremos-anio">
+      <h2 id="extremos-anio" class="section-title mb-1">Extremos de cada año</h2>
+      <div class="overflow-x-auto">
+        <table class="ledger min-w-[44rem]">
+          <thead>
+            <tr>
+              <th scope="col">Año</th>
+              <th scope="col" class="num">Día pico</th>
+              <th scope="col" class="num">Día más bajo</th>
+              <th scope="col">Mes más activo</th>
+              <th scope="col">Mes más tranquilo</th>
+              <th scope="col" class="num">Críticos</th>
+              <th scope="col" class="num">Sin actividad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of years(); track row.key) {
+              <tr data-interactive tabindex="0"
+                  [attr.aria-selected]="row.key === selection.year()"
+                  [attr.aria-label]="'Ver el año ' + row.key + ' mes a mes'"
+                  (click)="selection.selectYear(row.key)"
+                  (keydown.enter)="selection.selectYear(row.key)">
+                <td class="font-bold">{{ row.label }}</td>
+                <td class="num whitespace-nowrap">
+                  {{ formatShortDate(row.peak.date) }} · <strong>{{ formatIndex(row.peak.harmonizedIndex) }}</strong>
+                </td>
+                <td class="num whitespace-nowrap">
+                  {{ formatShortDate(row.lowest.date) }} · {{ formatIndex(row.lowest.harmonizedIndex) }}
+                </td>
+                <td>{{ row.busiestMonth }}</td>
+                <td>{{ row.calmestMonth }}</td>
+                <td class="num">{{ formatInteger(row.criticalDays) }}</td>
+                <td class="num">{{ formatInteger(row.quietDays) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="extremos-mes">
+      <h2 id="extremos-mes" class="section-title mb-1">Mes a mes en {{ selection.year() }}</h2>
+      <div class="overflow-x-auto">
+      <table class="ledger min-w-[26rem]">
+        <thead>
+          <tr>
+            <th scope="col">Mes</th>
+            <th scope="col" class="num">Índice</th>
+            <th scope="col" class="num">Día pico</th>
+            <th scope="col" class="num">Día más bajo</th>
+            <th scope="col" class="num">Críticos</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of months(); track row.key) {
+            <tr>
+              <td class="font-semibold">{{ row.label }}</td>
+              <td class="num">{{ formatIndex(row.totalIndex) }}</td>
+              <td class="num whitespace-nowrap">
+                <button type="button" class="underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+                        [attr.aria-label]="'Abrir en el mapa el día pico de ' + row.label"
+                        (click)="openOnMap(row.peak.date)">
+                  {{ formatShortDate(row.peak.date) }}
+                </button>
+                · <strong>{{ formatIndex(row.peak.harmonizedIndex) }}</strong>
+              </td>
+              <td class="num whitespace-nowrap">
+                {{ formatShortDate(row.lowest.date) }} · {{ formatIndex(row.lowest.harmonizedIndex) }}
+              </td>
+              <td class="num">{{ formatInteger(row.criticalDays) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="py-4 text-ink-2">No hay datos de {{ selection.year() }} para esta región.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      </div>
+      <p class="mt-2 text-[0.8125rem] text-ink-2">Elige otro año en la tabla de extremos de cada año.</p>
+    </section>
+  </div>
+</div>

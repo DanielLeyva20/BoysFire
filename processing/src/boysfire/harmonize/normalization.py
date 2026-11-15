@@ -73,7 +73,8 @@ def confidence_levels(
     """
     is_modis = satellite_id.isin(MODIS_SATELLITE_IDS)
 
-    percent = pd.to_numeric(confidence.where(is_modis), errors="coerce")
+    # float64 de NumPy: funciona igual si la columna llega como texto de Python o de pandas.
+    percent = pd.to_numeric(confidence.where(is_modis), errors="coerce").astype("float64")
     percent = percent.where(percent.between(0, 100))
     modis_level = pd.Series(
         np.select(

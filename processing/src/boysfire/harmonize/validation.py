@@ -5,36 +5,33 @@ import pandas as pd
 
 from boysfire.config import HarmonizationSettings
 from boysfire.domain.catalogs import REFERENCE_GROUP, SourceGroup
+from boysfire.harmonize.series import RegionSeries
 
 # Años completos de cada era, para medir el "salto falso" al entrar VIIRS en 2012.
 MODIS_ERA_YEARS = (2003, 2011)
 VIIRS_ERA_YEARS = (2013, 2021)
 
-
-def _monthly_totals(region_harmonized: pd.DataFrame, group: SourceGroup, days: pd.DatetimeIndex) -> pd.Series:
-    rows = region_harmonized.loc[
-        (region_harmonized["source_group_id"] == int(group)) & region_harmonized["activity_date"].isin(days)
-    ]
-    totals = rows.groupby(rows["activity_date"].dt.to_period("M"))["harmonized_index"].sum()
-    return totals.reindex(days.to_period("M").unique(), fill_value=0.0)
+# Percentiles diarios que se comparan: día tranquilo, día fuerte y día extremo.
+_DAILY_PERCENTILES = (50, 90, 99)
+_MIN_DAYS = 60
 
 
 def calibration_fit(
-    national_harmonized: pd.DataFrame,
+    series: RegionSeries,
+    region_id: int,
+    calibrated_groups: set[SourceGroup],
     group_days: dict[SourceGroup, pd.DatetimeIndex],
     settings: HarmonizationSettings,
 ) -> dict[str, float]:
-    """Compara, mes a mes, la estimación de cada grupo con la referencia en los días comunes.
+    """Compara la estimación de cada grupo con la referencia en los días en que ambos observaron.
 
-    ``fit`` usa los años con los que se calibró; ``holdout`` los años posteriores, que
-    el factor no vio: es la comprobación honesta.
+    ``fit`` usa los años con los que se calibró; ``holdout`` los años posteriores, que la
+    calibración no vio: es la comprobación honesta. Se mide el acuerdo mensual, el diario y
+    si la distribución de días (tranquilos, fuertes, extremos) coincide.
     """
     metrics: dict[str, float] = {}
     reference_days = group_days.get(REFERENCE_GROUP, pd.DatetimeIndex([]))
-    for group in national_harmonized["source_group_id"].unique():
-        group = SourceGroup(group)
-        if group is REFERENCE_GROUP:
-            continue
+    for group in sorted(calibrated_groups - {REFERENCE_GROUP}):
         common = group_days[group].intersection(reference_days)
         periods = {"fit": common}
         if group in settings.calibration_end:
@@ -42,29 +39,41 @@ def calibration_fit(
             periods = {"fit": common[common <= cutoff], "holdout": common[common > cutoff]}
 
         for label, days in periods.items():
-            if days.empty:
+            if len(days) < _MIN_DAYS:
                 continue
-            estimate = _monthly_totals(national_harmonized, group, days)
-            reference = _monthly_totals(national_harmonized, REFERENCE_GROUP, days)
-            if reference.sum() <= 0 or len(estimate) < 3:
+            estimate = series.for_group(region_id, group, days)
+            reference = series.for_group(region_id, REFERENCE_GROUP, days)
+            if reference.sum() <= 0:
                 continue
             prefix = f"validation.{group.name}.{label}"
-            metrics[f"{prefix}.months"] = float(len(estimate))
-            metrics[f"{prefix}.monthly_correlation"] = float(estimate.corr(reference))
+            metrics[f"{prefix}.days"] = float(len(days))
+            metrics[f"{prefix}.monthly_correlation"] = float(
+                _monthly_totals(estimate).corr(_monthly_totals(reference))
+            )
+            metrics[f"{prefix}.daily_correlation"] = float(estimate.corr(reference))
+            metrics[f"{prefix}.daily_mean_abs_error"] = float((estimate - reference).abs().mean())
             metrics[f"{prefix}.total_bias_pct"] = float((estimate.sum() / reference.sum() - 1) * 100)
+            for percentile in _DAILY_PERCENTILES:
+                expected = reference.quantile(percentile / 100)
+                if expected > 0:
+                    metrics[f"{prefix}.daily_p{percentile}_bias_pct"] = float(
+                        (estimate.quantile(percentile / 100) / expected - 1) * 100
+                    )
     return metrics
 
 
-def sensor_jump(national_activity: pd.DataFrame, official_national: pd.DataFrame) -> dict[str, float]:
+def _monthly_totals(daily: pd.Series) -> pd.Series:
+    return daily.groupby(daily.index.to_period("M")).sum()
+
+
+def sensor_jump(national_activity: pd.DataFrame, official_national: pd.Series) -> dict[str, float]:
     """Cuánto "sube" el fuego entre la era MODIS y la era VIIRS, con y sin armonizar.
 
     Sin armonizar, el promedio anual se multiplica solo porque entró un sensor más
     sensible. Armonizada, la razón debe quedar cerca de 1.
     """
     raw_per_year = national_activity.groupby(national_activity["activity_date"].dt.year)["detection_count"].sum()
-    harmonized_per_year = official_national.groupby(official_national["activity_date"].dt.year)[
-        "harmonized_index"
-    ].sum()
+    harmonized_per_year = official_national.groupby(official_national.index.year).sum()
 
     def era_mean(per_year: pd.Series, era: tuple[int, int]) -> float:
         return float(per_year.reindex(range(era[0], era[1] + 1)).mean())

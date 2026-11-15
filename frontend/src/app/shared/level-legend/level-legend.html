@@ -1,0 +1,14 @@
+<ul class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
+  @for (entry of entries(); track entry.level) {
+    <li class="flex items-center gap-1.5">
+      <span class="level-mark" [attr.data-level]="entry.level"></span>
+      {{ entry.label }}
+    </li>
+  }
+  @if (showEstimated()) {
+    <li class="flex items-center gap-1.5">
+      <span class="hatch h-3 w-3 flex-none border border-ink-3 text-ink-3"></span>
+      Estimado (fondo)
+    </li>
+  }
+</ul>

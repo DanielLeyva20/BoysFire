@@ -8,6 +8,7 @@ from boysfire.config import load_settings
 from boysfire.pipeline import runner
 
 _COMMANDS = {
+    "regions": "Descarga y carga los límites de departamentos, provincias y distritos.",
     "ingest": "Carga a la base los .zip de FIRMS que estén en data/raw (omite los ya cargados).",
     "harmonize": "Reconstruye el modelo armonizado a partir de los focos crudos.",
     "run": "Hace las dos cosas: ingest y luego harmonize.",
@@ -24,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
     settings = load_settings()
 
+    if arguments.command == "regions":
+        runner.run_regions(settings)
     if arguments.command in ("ingest", "run"):
         runner.run_ingest(settings)
     if arguments.command in ("harmonize", "run"):

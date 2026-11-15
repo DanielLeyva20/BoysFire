@@ -1,0 +1,73 @@
+<div class="flex items-start justify-between gap-3">
+  <div class="min-w-0">
+    <h3 class="text-lg leading-tight font-bold">Foco de calor</h3>
+    <p class="mt-0.5 text-sm text-ink-2">
+      @if (place.isLoading()) {
+        Ubicando el punto…
+      } @else if (place.value(); as located) {
+        {{ located.path }}
+      } @else {
+        Fuera de los distritos cargados
+      }
+    </p>
+  </div>
+  <button type="button" class="btn btn-icon flex-none" aria-label="Cerrar la ficha del foco" (click)="close.emit()">
+    <app-icon name="close" />
+  </button>
+</div>
+
+<table class="ledger mt-3">
+  <tbody>
+    <tr>
+      <td>Fecha</td>
+      <td class="text-right font-semibold">{{ date() }}</td>
+    </tr>
+    <tr>
+      <td>Hora de Perú</td>
+      <td class="num text-base font-bold">{{ time() }}</td>
+    </tr>
+    <tr>
+      <td>Coordenadas</td>
+      <td class="num">{{ coordinates() }}</td>
+    </tr>
+    <tr>
+      <td>Intensidad</td>
+      <td>
+        <span class="flex items-center justify-end gap-1.5 text-right">
+          <span class="level-mark" [attr.data-level]="level()"></span>{{ levelLabel() }}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td>Potencia radiativa</td>
+      <td class="num">{{ power() }}</td>
+    </tr>
+    <tr>
+      <td>Confianza</td>
+      <td class="text-right">{{ confidence() }}</td>
+    </tr>
+    <tr>
+      <td>Satélite</td>
+      <td class="text-right">{{ satellite() }}</td>
+    </tr>
+    <tr>
+      <td>Tamaño del píxel</td>
+      <td class="num">{{ footprint() }}</td>
+    </tr>
+    <tr>
+      <td>Pasada</td>
+      <td class="text-right">{{ hotspot().daytime ? 'De día' : 'De noche' }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="mt-3 flex items-center gap-2">
+  <button type="button" class="btn btn-primary" (click)="zoomIn.emit()">
+    <app-icon name="target" />
+    Acercar al foco
+  </button>
+</div>
+
+<p class="mt-3 text-[0.8125rem] text-ink-2">
+  Un foco de calor es un punto muy caliente visto desde el satélite. No siempre es un incendio: puede ser una quema agrícola.
+</p>

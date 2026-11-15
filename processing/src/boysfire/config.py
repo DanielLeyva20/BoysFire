@@ -62,11 +62,16 @@ class HarmonizationSettings:
         }
     )
 
-    # Peso del factor nacional frente al de la celda (en celdas-día). Con pocas
-    # muestras manda el nacional; con muchas, el de la celda.
+    # Ajuste local de la respuesta (por celda de calibración y mes). Con pocas muestras
+    # queda cerca de 1; este es el peso, en celdas-día, de ese "1" inicial.
     calibration_prior_strength: float = 50.0
-    # El factor de una celda no puede alejarse más de N veces del nacional.
+    # El ajuste local no puede corregir más de N veces en ningún sentido.
     calibration_max_deviation: float = 4.0
+    # Cuánto sigue el fondo (fuego que el grupo no ve) a la actividad nacional del día:
+    # 0 = fondo constante, 1 = proporcional. Elegido comparando con VIIRS real: con 0,5 los
+    # días extremos (percentil 99) quedan sin sesgo; valores mayores los exageran y
+    # menores los aplastan.
+    background_activity_exponent: float = 0.5
 
     # Climatología: ventana de ± días alrededor de cada día del año.
     climatology_window_days: int = 7
@@ -76,6 +81,7 @@ class HarmonizationSettings:
 class Settings:
     database: DatabaseSettings
     raw_data_dir: Path
+    boundaries_dir: Path
     harmonization: HarmonizationSettings = field(default_factory=HarmonizationSettings)
 
 
@@ -95,5 +101,9 @@ def load_settings() -> Settings:
         user=_required("DB_APP_USER"),
         password=_required("DB_APP_PASSWORD"),
     )
-    raw_data_dir = Path(os.environ.get("RAW_DATA_DIR", PROJECT_ROOT / "data" / "raw"))
-    return Settings(database=database, raw_data_dir=raw_data_dir)
+    data_dir = PROJECT_ROOT / "data"
+    return Settings(
+        database=database,
+        raw_data_dir=Path(os.environ.get("RAW_DATA_DIR", data_dir / "raw")),
+        boundaries_dir=Path(os.environ.get("BOUNDARIES_DIR", data_dir / "boundaries")),
+    )

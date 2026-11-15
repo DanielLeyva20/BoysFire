@@ -1,0 +1,70 @@
+<h3 class="text-lg leading-tight font-bold">{{ title() }}</h3>
+<p class="mt-0.5 flex items-center gap-2 text-sm text-ink-2">
+  <span class="capitalize">{{ weekday() }}</span>
+  <span class="flex items-center gap-1.5 font-semibold text-ink">
+    <span class="level-mark" [attr.data-level]="level()"></span>{{ levelLabel() }}
+  </span>
+</p>
+
+<!-- Regla: el índice del día frente a lo normal y al umbral crítico -->
+<div class="mt-4" role="img"
+     [attr.aria-label]="'Índice ' + formatIndex(day().harmonizedIndex) + '; lo normal es ' + formatIndex(day().expectedIndex ?? 0) + ' y el umbral crítico ' + formatIndex(day().criticalThreshold ?? 0)">
+  <div class="relative h-5 border-x border-ink bg-paper-3">
+    <div class="absolute inset-y-0 left-0 bg-ink" [style.width.%]="scale().detected"></div>
+    <div class="hatch absolute inset-y-0 text-ink" [style.left.%]="scale().detected" [style.width.%]="scale().background"></div>
+    @if (scale().expected; as expected) {
+      <div class="absolute -inset-y-1 w-0.5 bg-low-ink" [style.left.%]="expected"></div>
+    }
+    @if (scale().threshold; as threshold) {
+      <div class="absolute -inset-y-1 w-0.5 bg-high" [style.left.%]="threshold"></div>
+    }
+  </div>
+  <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.75rem] text-ink-2">
+    <span class="flex items-center gap-1.5"><span class="h-3 w-0.5 bg-low-ink"></span>Lo normal</span>
+    <span class="flex items-center gap-1.5"><span class="h-3 w-0.5 bg-high"></span>Umbral crítico</span>
+    <span class="flex items-center gap-1.5"><span class="hatch h-3 w-3 border border-ink-3 text-ink-3"></span>Estimado</span>
+  </div>
+</div>
+
+<table class="ledger mt-3">
+  <tbody>
+    <tr>
+      <td class="font-semibold">Índice armonizado</td>
+      <td class="num text-base font-bold">{{ formatIndex(day().harmonizedIndex) }}</td>
+    </tr>
+    <tr>
+      <td class="pl-3 text-ink-2">Detectado por satélite</td>
+      <td class="num">{{ formatIndex(day().detectedIndex) }}</td>
+    </tr>
+    <tr>
+      <td class="pl-3 text-ink-2">Fondo estimado</td>
+      <td class="num">{{ formatIndex(day().backgroundIndex) }}</td>
+    </tr>
+    <tr>
+      <td>Lo normal para esta fecha</td>
+      <td class="num">{{ day().expectedIndex === null ? '—' : formatIndex(day().expectedIndex!) }}</td>
+    </tr>
+    <tr>
+      <td>Umbral de día crítico</td>
+      <td class="num">{{ day().criticalThreshold === null ? '—' : formatIndex(day().criticalThreshold!) }}</td>
+    </tr>
+    <tr>
+      <td>Focos en todo el país</td>
+      <td class="num">
+        @if (hotspotsLoading()) {
+          <span class="text-ink-3">cargando…</span>
+        } @else {
+          {{ formatInteger(hotspots().count) }}{{ hotspots().truncated ? ' o más' : '' }}
+        }
+      </td>
+    </tr>
+    <tr>
+      <td>Fuente</td>
+      <td class="text-right text-[0.8125rem]">{{ sourceName() }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="mt-3 text-[0.8125rem] text-ink-2">
+  El índice cuenta celdas de ~1 km con fuego, en equivalente VIIRS. Toca un foco en el mapa para ver su lugar y hora exactos.
+</p>

@@ -1,0 +1,92 @@
+<div class="mx-auto w-full max-w-[88rem] px-4 py-6 lg:px-8 lg:py-8">
+  <h1 class="type-wide text-2xl leading-tight font-extrabold uppercase">Estadísticas de {{ selection.regionName() }}</h1>
+  <p class="mt-2 max-w-[70ch] text-ink-2">
+    Toda la serie de un vistazo: la forma de cada temporada, dónde se concentra el fuego y cuánto se puede confiar en
+    la comparación entre años.
+  </p>
+
+  <section class="mt-8" aria-labelledby="apilados-titulo">
+    <h2 id="apilados-titulo" class="section-title">La temporada, año por año</h2>
+    <p class="mt-2 max-w-[70ch] text-ink-2">
+      Cada línea es un año. La altura es la actividad diaria, suavizada a una semana. Elige una línea para ver ese año
+      en el resto de la aplicación.
+    </p>
+    <div class="mt-4 border-y-[1.5px] border-ink py-3">
+      @if (days().length > 0) {
+        <app-year-ridges [days]="days()" [selectedYear]="selection.year()" (yearSelect)="selection.selectYear($event)" />
+      } @else {
+        <div class="skeleton h-[32rem]" aria-hidden="true"></div>
+      }
+    </div>
+  </section>
+
+  <div class="mt-12 grid grid-cols-[minmax(0,1fr)] gap-x-12 gap-y-12 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <section aria-labelledby="ranking-titulo">
+      <h2 id="ranking-titulo" class="section-title mb-1">Dónde se concentra el fuego, 2000 a hoy</h2>
+      @if (children.value().length > 0) {
+        <div class="overflow-x-auto">
+          <app-region-ranking class="min-w-[34rem]"
+            [regions]="children.value()"
+            [activity]="activity()"
+            [showPeakYear]="true"
+            (regionSelect)="selection.selectRegion($event)"
+            (peakSelect)="openOnMap($event)" />
+        </div>
+        <p class="mt-2 text-[0.8125rem] text-ink-2">
+          La barra oscura es lo detectado por satélite; la rayada, el fondo estimado. Toca una región para verla por dentro.
+        </p>
+      } @else {
+        <p class="mt-2 text-ink-2">
+          {{ selection.regionName() }} es un distrito y no tiene regiones más pequeñas que comparar. Sube un nivel con la
+          cadena de la cabecera.
+        </p>
+      }
+    </section>
+
+    <div class="grid grid-cols-[minmax(0,1fr)] content-start gap-y-12">
+      <section aria-labelledby="validacion-titulo">
+        <h2 id="validacion-titulo" class="section-title mb-1">Cómo sabemos que la serie es comparable</h2>
+        <table class="ledger">
+          <tbody>
+            @for (row of validation(); track row.label) {
+              <tr>
+                <td>
+                  {{ row.label }}
+                  @if (row.note) {
+                    <span class="block text-[0.8125rem] text-ink-2">{{ row.note }}</span>
+                  }
+                </td>
+                <td class="num text-base font-bold whitespace-nowrap">{{ row.value }}</td>
+              </tr>
+            } @empty {
+              <tr><td class="py-4"><div class="skeleton h-24" aria-hidden="true"></div></td></tr>
+            }
+          </tbody>
+        </table>
+        <p class="mt-2 text-[0.8125rem] text-ink-2">Mediciones de todo el país, sobre la última armonización.</p>
+      </section>
+
+      <section aria-labelledby="cobertura-titulo">
+        <h2 id="cobertura-titulo" class="section-title mb-1">Qué datos hay</h2>
+        <table class="ledger">
+          <tbody>
+            @for (row of coverage(); track row.label) {
+              <tr>
+                <td>
+                  {{ row.label }}
+                  @if (row.note) {
+                    <span class="block text-[0.8125rem] text-ink-2">{{ row.note }}</span>
+                  }
+                </td>
+                <td class="num font-semibold whitespace-nowrap">{{ row.value }}</td>
+              </tr>
+            } @empty {
+              <tr><td class="py-4"><div class="skeleton h-24" aria-hidden="true"></div></td></tr>
+            }
+          </tbody>
+        </table>
+        <p class="mt-2 text-[0.8125rem] text-ink-2">Fuente: NASA FIRMS (MODIS C6.1 y VIIRS C2). Límites: INEI.</p>
+      </section>
+    </div>
+  </div>
+</div>

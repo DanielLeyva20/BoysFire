@@ -36,6 +36,15 @@ class SourceGroup(IntEnum):
     TERRA = 6
 
 
+class RegionLevel(IntEnum):
+    """Niveles administrativos, del más amplio al más fino."""
+
+    COUNTRY = 1
+    DEPARTMENT = 2
+    PROVINCE = 3
+    DISTRICT = 4
+
+
 SATELLITE_SENSOR: dict[Satellite, Sensor] = {
     Satellite.TERRA: Sensor.MODIS,
     Satellite.AQUA: Sensor.MODIS,

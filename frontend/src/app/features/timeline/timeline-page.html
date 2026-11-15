@@ -1,0 +1,88 @@
+<div class="mx-auto w-full max-w-[88rem] px-4 py-6 lg:px-8 lg:py-8">
+  <h1 class="type-wide text-2xl leading-tight font-extrabold uppercase">Línea de tiempo de {{ selection.regionName() }}</h1>
+  <p class="mt-2 max-w-[70ch] text-ink-2">
+    Cómo subió y bajó el fuego desde el año 2000, con el día exacto de cada alza y de cada caída.
+  </p>
+
+  <section class="mt-8" aria-labelledby="salto-titulo">
+    <h2 id="salto-titulo" class="section-title">El aumento que nunca ocurrió</h2>
+    <p class="mt-2 max-w-[70ch] text-ink-2">
+      En 2012 empezó a medir VIIRS, un sensor que ve fuegos más pequeños. Los focos crudos (barras) se multiplican de
+      golpe, pero no hubo más fuego: hubo mejor vista. La línea azul es la serie armonizada, que sí es comparable de
+      un año a otro.
+    </p>
+    @if (rawJump(); as raw) {
+      <p class="mt-3 max-w-[70ch] border-l border-rule-strong pl-3 text-sm">
+        En todo el país, los focos crudos por año son <strong>{{ formatDecimal(raw, 1) }} veces</strong> más
+        entre 2013 y 2021 que entre 2003 y 2011. Con la serie armonizada, la relación es
+        <strong>{{ formatDecimal(harmonizedJump() ?? 1, 2) }}</strong>: prácticamente igual.
+      </p>
+    }
+    <div class="mt-4 border-y-[1.5px] border-ink py-3">
+      <div class="h-80" [appChart]="jumpChart()" role="img"
+           aria-label="Barras de focos crudos de MODIS y VIIRS por año y línea del índice armonizado"></div>
+    </div>
+  </section>
+
+  <section class="mt-12" aria-labelledby="diaria-titulo">
+    <h2 id="diaria-titulo" class="section-title">Día por día</h2>
+    <p class="mt-2 max-w-[70ch] text-ink-2">
+      Arrastra la barra inferior para recorrer los años o usa la rueda del ratón para acercarte. Las franjas rojas son
+      los períodos críticos. Haz clic en un día para abrirlo en el mapa.
+    </p>
+    <div class="mt-4 border-y-[1.5px] border-ink py-3">
+      <div class="h-96" [appChart]="dailyChart()" (pointClick)="openDayAt($event)" role="img"
+           aria-label="Serie diaria del índice armonizado con su umbral crítico y lo normal para cada fecha"></div>
+    </div>
+  </section>
+
+  <section class="mt-12" aria-labelledby="periodos-titulo">
+    <h2 id="periodos-titulo" class="section-title mb-1">Los períodos críticos más intensos</h2>
+    <div class="overflow-x-auto">
+      <table class="ledger min-w-[40rem]">
+        <thead>
+          <tr>
+            <th scope="col">Año</th>
+            <th scope="col">Desde</th>
+            <th scope="col">Hasta</th>
+            <th scope="col" class="w-2/5">Duración</th>
+            <th scope="col" class="num">Día pico</th>
+            <th scope="col" class="num">Índice acumulado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of strongestPeriods(); track row.period.start) {
+            <tr>
+              <td class="font-bold">{{ row.year }}</td>
+              <td class="whitespace-nowrap">{{ formatShortDate(row.period.start) }}</td>
+              <td class="whitespace-nowrap">{{ formatShortDate(row.period.end) }}</td>
+              <td>
+                <span class="flex items-center gap-2">
+                  <span class="block h-2.5 min-w-1 bg-high" [style.width.%]="row.blockWidth * 0.8"></span>
+                  <span class="type-narrow whitespace-nowrap">{{ row.durationDays }} días</span>
+                </span>
+              </td>
+              <td class="num whitespace-nowrap">
+                <button type="button" class="underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+                        [attr.aria-label]="'Abrir en el mapa el día pico del período de ' + row.year"
+                        (click)="openOnMap(row.period.peakDate)">
+                  {{ formatShortDate(row.period.peakDate) }}
+                </button>
+                · <strong>{{ formatIndex(row.period.peakIndex) }}</strong>
+              </td>
+              <td class="num">{{ formatIndex(row.period.totalIndex) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="py-4 text-ink-2">Esta región no tiene períodos críticos de tres días o más.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-2 max-w-[70ch] text-[0.8125rem] text-ink-2">
+      Un período crítico es una racha de al menos tres días por encima del umbral, con pausas de un día como máximo.
+      Antes de 2012 buena parte del índice es una estimación, así que esos períodos se leen con más cautela.
+    </p>
+  </section>
+</div>

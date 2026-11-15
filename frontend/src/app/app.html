@@ -1,0 +1,35 @@
+<a class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-paper focus:px-3 focus:py-2"
+   href="#contenido">Saltar al contenido</a>
+
+<header class="sticky top-0 z-30 border-b-[1.5px] border-ink bg-paper">
+  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 lg:px-6">
+    <a routerLink="/" class="flex items-baseline gap-2 no-underline">
+      <span class="type-wide text-lg font-extrabold uppercase tracking-wide">BoysFire</span>
+      <span class="hidden text-sm text-ink-2 sm:inline">Almanaque de incendios de Perú</span>
+    </a>
+
+    <app-region-picker class="order-3 w-full lg:order-none lg:w-auto lg:flex-1" />
+
+    <nav aria-label="Secciones" class="ml-auto flex gap-1 overflow-x-auto">
+      @for (link of links; track link.path) {
+        <a [routerLink]="link.path"
+           routerLinkActive="!border-ink !text-ink"
+           [routerLinkActiveOptions]="{ exact: true }"
+           ariaCurrentWhenActive="page"
+           class="type-narrow border-b-2 border-transparent px-2.5 py-1.5 text-[0.9375rem] font-semibold whitespace-nowrap text-ink-2 no-underline transition-colors duration-150 hover:text-ink">
+          {{ link.label }}
+        </a>
+      }
+    </nav>
+  </div>
+</header>
+
+@if (selection.summary.error()) {
+  <p role="alert" class="border-b border-high bg-paper-2 px-4 py-3 text-sm text-high-ink lg:px-6">
+    No se pudo conectar con la API. Comprueba que el backend esté en marcha en el puerto 8080 y recarga la página.
+  </p>
+}
+
+<main id="contenido" class="flex min-h-0 flex-1 flex-col lg:overflow-y-auto">
+  <router-outlet />
+</main>

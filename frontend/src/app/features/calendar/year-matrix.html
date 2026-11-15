@@ -1,0 +1,17 @@
+<canvas #canvas class="block cursor-pointer"
+        role="img"
+        aria-label="Matriz de actividad: una fila por año y una columna por día. Los mismos datos están en las tablas de abajo."
+        [style.width.px]="canvasWidth()"
+        [style.height.px]="height()"
+        (pointermove)="onPointerMove($event)"
+        (pointerleave)="hover.set(undefined)"
+        (click)="onClick($event)"></canvas>
+
+@if (hover(); as pointer) {
+  <div class="pointer-events-none absolute z-10 rounded-sheet bg-ink px-2.5 py-1.5 text-[0.8125rem] leading-snug whitespace-nowrap text-paper shadow-sheet"
+       [style.left.px]="pointer.x + 12"
+       [style.top.px]="pointer.y + 14">
+    <strong class="block">{{ hoverText()?.date }}</strong>
+    {{ hoverText()?.detail }}
+  </div>
+}

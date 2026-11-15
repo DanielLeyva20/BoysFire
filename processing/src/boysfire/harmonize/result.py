@@ -13,8 +13,11 @@ class HarmonizationResult:
     grid_cells: pd.DataFrame
     hotspots: pd.DataFrame
     observation_days: pd.DataFrame
-    calibration_baseline: pd.DataFrame
+    calibration_response: pd.DataFrame
     calibration_factors: pd.DataFrame
+    daily_background_scale: pd.DataFrame
+    background_cell_rates: pd.DataFrame
+    background_region_rates: pd.DataFrame
     daily_cell_activity: pd.DataFrame
     daily_cell_harmonized: pd.DataFrame
     daily_region_activity: pd.DataFrame

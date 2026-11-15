@@ -1,0 +1,30 @@
+<div class="grid grid-cols-3 gap-x-3 gap-y-3 lg:grid-cols-4">
+  @for (month of months(); track month.name) {
+    <section [attr.aria-label]="month.name + ' de ' + year()">
+      <h3 class="type-wide mb-1 border-b border-ink pb-0.5 text-[0.6875rem] font-extrabold tracking-wider uppercase">
+        {{ month.name }}
+      </h3>
+      <div class="month-grid" aria-hidden="true">
+        @for (initial of weekdayInitials; track $index) {
+          <span class="weekday">{{ initial }}</span>
+        }
+      </div>
+      <div class="month-grid">
+        @for (blank of month.leadingBlanks; track blank) {
+          <span></span>
+        }
+        @for (cell of month.days; track cell.date) {
+          <button type="button" class="day"
+                  [attr.data-level]="cell.level"
+                  [attr.aria-pressed]="cell.date === selectedDate()"
+                  [attr.aria-label]="cell.description"
+                  [title]="cell.description"
+                  [disabled]="cell.level === 'gap'"
+                  (click)="daySelect.emit(cell.date)">
+            {{ cell.dayOfMonth }}
+          </button>
+        }
+      </div>
+    </section>
+  }
+</div>

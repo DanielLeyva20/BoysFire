@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: boysfire-api
+  config:
+    # Las credenciales viven en el .env de la raíz del repositorio (no se versiona).
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:127.0.0.1}:${DB_PORT:14330};databaseName=${DB_NAME:boysfire};encrypt=true;trustServerCertificate=true
+    username: ${DB_APP_USER}
+    password: ${DB_APP_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      read-only: true          # la API solo consulta; el pipeline de Python es quien escribe
+  cache:
+    type: caffeine
+    caffeine:
+      # Los datos cambian solo cuando corre el pipeline: 10 minutos de caché bastan.
+      spec: maximumSize=2000,expireAfterWrite=10m
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${API_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,application/geo+json,application/problem+json
+    min-response-size: 1024
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+boysfire:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  limits:
+    hotspot-max-days: 31        # rango máximo de fechas al pedir focos individuales
+    hotspot-default-limit: 20000
+    hotspot-max-limit: 50000
+    map-cell-max-days: 366      # rango máximo al pedir celdas agregadas del mapa
+    region-search-max-results: 20

@@ -1,36 +1,55 @@
-"""Paso 7 · Agregados diarios: actividad observada por satélite e índice armonizado por grupo."""
+"""Paso 7 · Agregados diarios: actividad observada por satélite e índice armonizado por grupo.
+
+Todas las funciones agregan por una columna ``key`` (celda de mapa o región), de modo que
+el mismo código sirve para cualquier nivel.
+"""
 from __future__ import annotations
 
 import pandas as pd
 
 from boysfire.config import HarmonizationSettings
 from boysfire.domain.catalogs import REFERENCE_GROUP
+from boysfire.harmonize.calibration import Calibration
+
+_CELL_DAY = ["source_group_id", "activity_date", "calibration_cell"]
 
 
-def attach_ratio(loci: pd.DataFrame, factors: pd.DataFrame) -> pd.DataFrame:
-    """Añade a cada celda activa el factor de su grupo, celda de calibración y mes.
+def attach_weight(loci: pd.DataFrame, calibration: Calibration) -> pd.DataFrame:
+    """Añade a cada celda activa su peso en "equivalente de la referencia".
 
-    La referencia vale 1. Las filas de grupos sin calibrar se descartan.
+    La respuesta se calcula por celda de calibración y día (``coefficient × n ^ exponent ×
+    ajuste local``) y se reparte por igual entre sus ``n`` celdas activas, para que el
+    índice se pueda sumar por cualquier zona. La referencia pesa 1. Las celdas activas
+    de grupos sin calibrar se descartan.
     """
-    keyed = loci.assign(month_of_year=loci["activity_date"].dt.month)
-    merged = keyed.merge(
-        factors.rename(columns={"h3_cell": "calibration_cell"})[
+    frame = loci.assign(month_of_year=loci["activity_date"].dt.month)
+    frame["n"] = frame.groupby(_CELL_DAY)["h3_cell"].transform("size")
+    frame = frame.merge(calibration.response[["source_group_id", "coefficient", "exponent"]], on="source_group_id", how="left")
+    frame = frame.merge(
+        calibration.factors.rename(columns={"h3_cell": "calibration_cell"})[
             ["source_group_id", "calibration_cell", "month_of_year", "ratio"]
         ],
         on=["source_group_id", "calibration_cell", "month_of_year"],
         how="left",
     )
-    is_reference = merged["source_group_id"] == int(REFERENCE_GROUP)
-    merged["ratio"] = merged["ratio"].where(~is_reference, 1.0)
-    return merged.dropna(subset=["ratio"]).drop(columns="month_of_year")
+    weight = frame["coefficient"] * frame["n"] ** (frame["exponent"] - 1) * frame["ratio"].fillna(1.0)
+    frame["weight"] = weight.where(frame["source_group_id"] != int(REFERENCE_GROUP), 1.0)
+    return frame.dropna(subset=["weight"]).drop(columns=["month_of_year", "n", "coefficient", "exponent", "ratio"])
 
 
-def harmonized_by(loci_with_ratio: pd.DataFrame, key: str, key_name: str) -> pd.DataFrame:
-    """Índice armonizado por día, ``key`` y grupo: suma de (celdas activas × factor)."""
-    grouped = loci_with_ratio.groupby(["activity_date", key, "source_group_id"], sort=True)["ratio"]
-    result = grouped.agg(active_loci="size", harmonized_index="sum").reset_index()
-    result["harmonized_index"] = result["harmonized_index"].round(4)
+def detected_by(weighted_loci: pd.DataFrame, key: str, key_name: str) -> pd.DataFrame:
+    """Parte detectada del índice por día, ``key`` y grupo: suma de los pesos de sus celdas activas."""
+    grouped = weighted_loci.groupby(["activity_date", key, "source_group_id"], sort=True)["weight"]
+    result = grouped.agg(active_loci="size", detected_index="sum").reset_index()
+    result["detected_index"] = result["detected_index"].round(4)
     return result.rename(columns={key: key_name})
+
+
+def background_by(background_rates: pd.DataFrame, key: str, key_name: str) -> pd.DataFrame:
+    """Tasa diaria de fondo por grupo, ``key`` y mes."""
+    result = background_rates.groupby(["source_group_id", key, "month_of_year"], as_index=False)["daily_rate"].sum()
+    result["daily_rate"] = result["daily_rate"].round(6)
+    return result.loc[result["daily_rate"] > 0].rename(columns={key: key_name})
 
 
 def activity_by(
@@ -54,26 +73,3 @@ def activity_by(
     result["confident_count"] = result["confident_count"].astype("int64")
     result["frp_sum_mw"] = result["frp_sum_mw"].round(2)
     return result.rename(columns={key: key_name})
-
-
-def official_series(region_harmonized: pd.DataFrame, observation_days: pd.DataFrame) -> pd.DataFrame:
-    """Serie oficial por región: un valor por día observado (0 si no hubo fuego).
-
-    Toma de cada día la estimación del grupo elegido en ``observation_days``.
-    Columnas: region_id, activity_date, harmonized_index.
-    """
-    chosen = region_harmonized.merge(observation_days, on=["activity_date", "source_group_id"])
-    series = []
-    for region_id, rows in chosen.groupby("region_id"):
-        values = (
-            rows.set_index("activity_date")["harmonized_index"]
-            .reindex(pd.DatetimeIndex(observation_days["activity_date"]), fill_value=0.0)
-        )
-        series.append(
-            pd.DataFrame(
-                {"region_id": region_id, "activity_date": values.index, "harmonized_index": values.to_numpy()}
-            )
-        )
-    if not series:
-        return pd.DataFrame(columns=["region_id", "activity_date", "harmonized_index"])
-    return pd.concat(series, ignore_index=True)

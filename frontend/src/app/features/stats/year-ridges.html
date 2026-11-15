@@ -1,0 +1,26 @@
+<svg class="h-auto w-full min-w-[42rem]" [attr.viewBox]="'0 0 ' + viewWidth + ' ' + viewHeight()"
+     role="group" aria-label="Forma de la temporada de cada año, un año por línea">
+  @for (ridge of ridges(); track ridge.year) {
+    <g class="cursor-pointer" role="button" tabindex="0"
+       [attr.aria-label]="'Elegir el año ' + ridge.year"
+       [attr.aria-pressed]="ridge.year === selectedYear()"
+       (click)="yearSelect.emit(ridge.year)"
+       (keydown.enter)="yearSelect.emit(ridge.year)">
+      <path [attr.d]="ridge.path" stroke-linejoin="round"
+            [class]="ridge.year === selectedYear()
+              ? 'fill-accent-wash stroke-accent [stroke-width:2.2]'
+              : 'fill-paper stroke-ink [stroke-width:1] hover:fill-paper-2'" />
+      <text x="0" [attr.y]="ridge.baseline" font-size="11"
+            [class]="ridge.year === selectedYear() ? 'fill-accent font-extrabold' : 'fill-ink-2'">
+        {{ ridge.year }}
+      </text>
+    </g>
+  }
+
+  <g aria-hidden="true">
+    @for (tick of monthTicks; track tick.label) {
+      <line [attr.x1]="tick.x" [attr.x2]="tick.x" [attr.y1]="topMargin" [attr.y2]="footerY() - 12" class="stroke-rule" stroke-width="0.6" />
+      <text [attr.x]="tick.x + 3" [attr.y]="footerY()" font-size="11" class="fill-ink-2">{{ tick.label }}</text>
+    }
+  </g>
+</svg>

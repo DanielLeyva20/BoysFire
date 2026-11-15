@@ -115,27 +115,41 @@ Código en `processing/src/boysfire/harmonize/`. Cada paso es un módulo.
             │       no focos. Un incendio de 1 km² es 1 píxel MODIS y ~7 VIIRS:
             │       contado así vale lo mismo para ambos.
             ▼
- 6. CALIBRACIÓN ─── factor = celdas activas de VIIRS S-NPP / celdas activas del grupo,
-            │       por celda de ~1 770 km² (resolución 4) y mes, medido en los años
-            │       comunes. Con pocos datos el factor se acerca al nacional del mes.
+ 6. CALIBRACIÓN ─── en los años comunes con VIIRS S-NPP se ajustan dos partes:
+            │       · Respuesta: donde el grupo ve fuego, VIIRS ve más, pero la ventaja
+            │         baja cuanto mayor es el fuego. Para una celda de ~1 770 km²
+            │         (resolución 4) y un día con n celdas activas:
+            │             equivalentes = coeficiente × n ^ exponente × ajuste local
+            │       · Fondo: más de la mitad de lo que ve VIIRS ocurre donde el grupo
+            │         no ve nada. Se estima una tasa diaria por zona y mes, modulada
+            │         por la actividad de cada día.
             ▼
- 7. SERIE ───────── índice armonizado = celdas activas × factor, en "equivalente
-            │       VIIRS S-NPP". Cada día usa el mejor grupo disponible:
+ 7. SERIE ───────── índice armonizado = detectado + fondo, en "equivalente VIIRS
+            │       S-NPP". Cada día usa el mejor grupo disponible:
             │       S-NPP → NOAA-20 → MODIS (Terra+Aqua) → Aqua → Terra.
             ▼
- 8. CLIMATOLOGÍA ── lo normal para cada día del año (±7 días) y umbral de día crítico
-            │       (percentil 90, con un piso para la época de lluvias).
+ 8. REGIONES ────── cada celda de ~1 km se ubica en su distrito, provincia y
+            │       departamento; todo se agrega en los cuatro niveles.
             ▼
- 9. VALIDACIÓN ──── se compara la estimación desde MODIS con VIIRS real.
+ 9. CLIMATOLOGÍA ── lo normal para cada día del año (±7 días) y umbral de día crítico
+            │       (percentil 90, con un piso para la época de lluvias), por región.
+            ▼
+10. VALIDACIÓN ──── se compara la estimación desde MODIS con VIIRS real.
 ```
+
+Un factor único por zona y mes iguala los totales, pero carga todo el "fondo" sobre los
+días con detecciones y exagera los picos diarios. Por eso el modelo tiene dos partes.
 
 **Resultado con los datos de Perú (2000-11 → 2026-11, 2,15 millones de focos):**
 
 | Medida | Sin armonizar | Armonizado |
 |---|---|---|
-| Promedio anual 2013–2021 frente a 2003–2011 | **7,9 veces más** (salto falso) | **0,96** (sin salto) |
+| Promedio anual 2013–2021 frente a 2003–2011 | **7,9 veces más** (salto falso) | **0,95** (sin salto) |
 | Correlación mensual MODIS estimado vs VIIRS real, 2012–2021 | — | 0,98 |
-| Igual, en 2022–2026 (años que la calibración no vio) | — | 0,98, sesgo −6 % |
+| Igual, en 2022–2026 (años que la calibración no vio) | — | 0,995, sesgo +0,2 % |
+| Correlación diaria MODIS estimado vs VIIRS real, 2022–2026 | — | 0,82 |
+| Días extremos (percentil 99 diario) frente a VIIRS real, 2022–2026 | — | +1 % |
+| Días críticos por año, 2003–2011 frente a 2013–2021 | — | 35 frente a 30 |
 
 ---
 
@@ -222,39 +236,56 @@ fire    modelo armonizado (se reconstruye desde ingest)
         grid_cell                celdas H3: locus r8 → mapa r5 → calibración r4
         hotspot                  foco limpio, 1 a 1 con su registro crudo
         observation_day          qué grupo de satélites alimenta cada día
-        calibration_baseline     factor nacional por grupo y mes
-        calibration_factor       factor por grupo, celda r4 y mes
+        calibration_response     respuesta a la intensidad por grupo (coeficiente y exponente)
+        calibration_factor       ajuste local de la respuesta por grupo, celda r4 y mes
+        daily_background_scale   peso del fondo por día y grupo
+        background_cell_rate     tasa diaria de fondo por grupo, celda r5 y mes
+        background_region_rate   tasa diaria de fondo por grupo, región y mes
         daily_cell_activity      focos observados por día, celda r5 y satélite
-        daily_cell_harmonized    índice armonizado por día, celda r5 y grupo
+        daily_cell_harmonized    parte detectada del índice por día, celda r5 y grupo
         daily_region_activity    focos observados por día, región y satélite
-        daily_region_harmonized  índice armonizado por día, región y grupo
+        daily_region_harmonized  parte detectada del índice por día, región y grupo
         region_climatology       lo normal y el umbral crítico por día del año
 
 vistas  fire.v_hotspot · fire.v_daily_region_index · fire.v_calendar_day · fire.v_daily_cell_index
+        (las tres últimas entregan detected_index + background_index = harmonized_index)
 ```
 
+`ref.region` tiene Perú, 25 departamentos, 195 provincias y 1 826 distritos con su geometría.
+Cada celda de ~1 km guarda su distrito en `fire.grid_cell.region_id`.
+
 Pendiente (se añadirá con nuevas migraciones): `fire_event`, `alert_zone`, `alert`,
-`risk_forecast`, `citizen_report` y los límites de departamentos, provincias y distritos.
+`risk_forecast` y `citizen_report`.
 
 ---
 
-## 8. API (borrador)
+## 8. API (implementada)
 
-| Método | Endpoint | Descripción |
-|---|---|---|
-| GET | `/api/hotspots?bbox=&from=&to=&sensor=&minConf=` | Focos en un área y rango |
-| GET | `/api/calendar?regionId=&year=&mode=harmonized` | Datos del calendario de actividad |
-| GET | `/api/calendar/critical-periods?regionId=` | Períodos críticos detectados |
-| GET | `/api/events?bbox=&from=&to=&status=` | Eventos de incendio |
-| GET | `/api/events/{id}` | Detalle + timeline + antes/después |
-| GET | `/api/events/{id}/burn-severity` | Raster/polígonos dNBR |
-| GET | `/api/compare?regionId=&yearA=&yearB=` | Comparación temporal |
-| GET | `/api/risk?date=&bbox=` | Riesgo / pronóstico |
-| POST | `/api/alert-zones` | Crear zona de vigilancia |
-| GET | `/api/alerts` | Alertas del usuario |
-| WS | `/ws/alerts` | Alertas en vivo |
-| POST | `/api/reports` | Reporte ciudadano |
-| GET | `/tiles/hotspots/{z}/{x}/{y}.pbf` | Vector tiles para el mapa |
+Spring Boot 4 · Java 25 · solo lectura. Documentación interactiva en `http://localhost:8080/swagger-ui.html`.
+
+| Endpoint | Descripción |
+|---|---|
+| `GET /api/meta` | Rango de fechas disponible, volumen de datos y métricas de validación |
+| `GET /api/regions?parentId=&level=` | Regiones hijas de una región, o todas las de un nivel. Sin parámetros, el país |
+| `GET /api/regions/search?q=` | Búsqueda por nombre, sin distinguir mayúsculas ni tildes |
+| `GET /api/regions/locate?latitude=&longitude=` | Distrito, provincia y departamento que contienen un punto |
+| `GET /api/regions/{id}` | Una región con sus ancestros |
+| `GET /api/regions/{id}/geometry` | Contorno de la región (GeoJSON) |
+| `GET /api/regions/{id}/children/geometry` | Contorno de cada región hija (GeoJSON) |
+| `GET /api/calendar/days?regionId=&from=&to=` | Serie diaria armonizada: índice, detectado, fondo, lo normal, umbral y si es crítico |
+| `GET /api/calendar/years?regionId=` | Resumen por año: serie armonizada junto a los focos crudos de MODIS y VIIRS |
+| `GET /api/calendar/sensor-days?regionId=&from=&to=` | Focos observados por día y sensor, sin armonizar |
+| `GET /api/calendar/climatology?regionId=` | Lo normal para cada día del año y el umbral crítico |
+| `GET /api/calendar/children?parentId=&from=&to=` | Actividad de cada región hija, de mayor a menor, con su día pico |
+| `GET /api/calendar/critical-periods?regionId=&from=&to=&minCriticalDays=&maxGapDays=` | Rachas de días críticos |
+| `GET /api/hotspots?bbox=&from=&to=&sensor=&minConfidence=&limit=` | Focos individuales en un área (máximo 31 días) |
+| `GET /api/map/cells?from=&to=&bbox=&includeBackground=` | Índice acumulado por celda hexagonal H3 (máximo 366 días) |
+
+- Sin `regionId` se responde para el país; sin `from` o `to` se usa el inicio o el fin de la serie.
+- `bbox` es `minLon,minLat,maxLon,maxLat`. Las fechas son `AAAA-MM-DD`, en hora de Perú.
+- Los errores llegan como `application/problem+json` con un mensaje en `detail`.
+
+Pendiente: eventos, alertas (REST y WebSocket), riesgo y reporte ciudadano.
 
 ---
 
@@ -266,21 +297,37 @@ Hackaton/
 ├── .env.example             # variables (copiar a .env)
 ├── db/
 │   ├── init/                # crea la base y el usuario de la aplicación
-│   └── migrations/          # V1…V5: esquemas, tablas, catálogos y vistas (Flyway)
+│   └── migrations/          # V1…V6: esquemas, tablas, catálogos y vistas (Flyway)
 ├── processing/              # Python: ingesta y armonización
 │   ├── pyproject.toml
 │   ├── src/boysfire/
-│   │   ├── cli.py           # python -m boysfire run | ingest | harmonize
+│   │   ├── cli.py           # python -m boysfire regions | ingest | harmonize | run
 │   │   ├── config.py        # conexión y parámetros de armonización
 │   │   ├── domain/          # catálogos (satélites, confianza, grupos)
 │   │   ├── db/              # conexión, carga masiva y repositorios por esquema
 │   │   ├── ingest/          # lectura de los .zip de FIRMS y carga cruda
+│   │   ├── regions/         # límites administrativos y ubicación de puntos
 │   │   ├── harmonize/       # un módulo por paso del pipeline (sección 4)
 │   │   └── pipeline/        # orquestación y bitácora
 │   └── tests/               # pruebas unitarias (pytest)
 ├── data/raw/                # .zip descargados de FIRMS (no se versionan)
-├── backend/                 # Spring Boot (pendiente)
-└── frontend/                # Angular (pendiente)
+├── data/boundaries/         # límites administrativos (se descargan solos)
+├── backend/                 # API REST (Spring Boot)
+│   ├── pom.xml
+│   └── src/main/java/pe/boysfire/api/
+│       ├── common/          # configuración, errores, dominio, GeoJSON y valores de consulta
+│       ├── region/          # un paquete por módulo: controlador, servicio, repositorio y modelos
+│       ├── calendar/
+│       ├── hotspot/
+│       ├── mapcell/
+│       └── meta/
+└── frontend/                # Aplicación web (Angular + Tailwind CSS)
+    └── src/
+        ├── styles/          # tema (colores, tipografía), base y componentes comunes
+        └── app/
+            ├── core/        # acceso a la API, estado compartido y reglas (niveles, fechas, formato)
+            ├── shared/      # piezas reutilizables: selector de región, leyenda, ranking, gráficos, iconos
+            └── features/    # una carpeta por página: map, calendar, timeline, stats
 ```
 
 ---
@@ -292,9 +339,11 @@ Hackaton/
 - [x] Pipeline: limpieza + normalización de confianza + deduplicación + grilla H3.
 - [x] Cálculo de factor de calibración y serie armonizada.
 - [x] Tablas de actividad diaria y climatología.
-- [ ] Endpoint del calendario (Spring Boot).
-- [ ] Angular: mapa satelital + calendario heatmap enlazados (clic en día → mapa).
-- [ ] Slider de línea de tiempo.
+- [x] Departamentos, provincias y distritos: todo agregado en los cuatro niveles.
+- [x] API REST: calendario, regiones, focos y celdas del mapa (Spring Boot).
+- [x] Angular: mapa satelital + calendario enlazados (clic en día → mapa), con seis mapas base.
+- [x] Línea de tiempo, calendario de todos los años y página de estadísticas.
+- [x] Reproducción día a día de un año en el mapa.
 
 **Fase 2 — Diferenciadores**
 - [ ] Eventos (ST-DBSCAN) con polígonos y panel de detalle.
@@ -326,14 +375,28 @@ cd processing
 python -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
 
-# 4. Coloca los .zip de FIRMS en data/raw/ y ejecuta el pipeline (≈5 min)
+# 4. Carga los límites de departamentos, provincias y distritos (una sola vez)
+.venv\Scripts\python -m boysfire regions
+
+# 5. Coloca los .zip de FIRMS en data/raw/ y ejecuta el pipeline (≈7 min)
 .venv\Scripts\python -m boysfire run
 
 # Pruebas
 .venv\Scripts\python -m pytest
+
+# 6. API (requiere Java 25 y Maven)
+cd ..\backend
+mvn spring-boot:run          # o: mvn package  y  java -jar target\boysfire-api-0.1.0.jar
+
+# 7. Aplicación web (requiere Node 22), en otra terminal
+cd ..\frontend
+npm install
+npm start                    # abre http://localhost:4200
 ```
 
-SQL Server queda en `127.0.0.1:14330` (base `boysfire`).
+SQL Server queda en `127.0.0.1:14330` (base `boysfire`), la API en `http://localhost:8080` y la aplicación en
+`http://localhost:4200` (que reenvía `/api` a la API).
+La API lee las credenciales del mismo `.env` de la raíz.
 
 ---
 
@@ -341,8 +404,10 @@ SQL Server queda en `127.0.0.1:14330` (base `boysfire`).
 - Un foco de calor **no es** necesariamente un incendio (quemas agrícolas, superficies calientes); se mitiga con filtros de confianza, tipo y fuentes estáticas.
 - Nubes y humo pueden ocultar fuegos; las pasadas son 2–4 veces al día, no continuas.
 - La calibración MODIS↔VIIRS es estadística: mejora la comparabilidad, pero no reconstruye fuegos pequeños que MODIS nunca vio.
-- El factor es multiplicativo: los totales mensuales y anuales quedan bien, pero en la era MODIS los días de pico salen exagerados (percentil 99 diario ≈ 40 % mayor que el de VIIRS en los años comunes) y los días tranquilos, algo bajos.
-- De 2000-11 a 2002-07 solo existe Terra, que ve muy poco (factor ≈ 24): esos meses son los menos fiables.
+- Antes de 2012, alrededor de tres cuartos del índice anual es **fondo estimado** (fuego pequeño que MODIS no ve), no detecciones. El fondo sigue la estacionalidad y la actividad del día, pero no ubica incendios concretos.
+- En la era MODIS los días tranquilos salen algo altos (mediana diaria ≈ +17 a +27 % frente a VIIRS real); los días fuertes y extremos quedan sin sesgo apreciable.
+- Los límites administrativos son una versión simplificada del INEI: faltan 8 distritos sin geometría y 1 provincia, los nombres vienen sin tildes y no incluye los distritos creados en los últimos años.
+- De 2000-11 a 2002-07 solo existe Terra, que ve muy poco: en esos meses el índice es casi todo fondo y son los menos fiables.
 - Los datos NRT pueden corregirse luego en la versión estándar (SP).
 
 ---

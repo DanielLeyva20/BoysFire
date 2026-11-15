@@ -1,0 +1,168 @@
+<!-- Leyenda del mapa: sobre el mapa en pantallas anchas y debajo de él en el móvil. -->
+<ng-template #legend>
+  <p class="mb-1 text-[0.8125rem] font-semibold">
+    {{ overlay() === 'regions' ? 'Regiones' : 'Celdas de ~250 km²' }}: actividad {{ periodPhrase() }}
+  </p>
+  <app-level-legend [labels]="relativeLabels" />
+  @if (selection.date()) {
+    <p class="mt-2 mb-1 text-[0.8125rem] font-semibold">Focos: potencia del fuego</p>
+    <app-level-legend [labels]="hotspotLabels" />
+  }
+  @if (peakMark(); as mark) {
+    <p class="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-ink-2">
+      <span class="inline-block h-3 w-3 flex-none rounded-full border-2 border-ink"></span>{{ mark.label }}
+    </p>
+  }
+</ng-template>
+
+<div class="grid flex-1 grid-cols-[minmax(0,1fr)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_30rem] lg:grid-rows-[minmax(0,1fr)_auto]">
+
+  <!-- ── Mapa ─────────────────────────────────────────────────────── -->
+  <section class="relative h-[62dvh] min-h-96 lg:h-auto" aria-label="Mapa">
+    <app-fire-map
+      [basemap]="basemapId()"
+      [overlay]="overlay()"
+      [regions]="regionCollection()"
+      [cells]="cellCollection()"
+      [hotspots]="hotspotCollection()"
+      [imageryDate]="imageryDate()"
+      [focus]="focus()"
+      [selectedHotspotId]="selectedHotspotId()"
+      [peak]="peakMark()"
+      (regionClick)="selection.selectRegion($event)"
+      (hotspotClick)="selectedHotspotId.set($event)"
+      (peakClick)="onPeakClick()" />
+
+    <!-- Controles: mapa base, qué se colorea y el día -->
+    <div class="pointer-events-none absolute top-3 right-14 left-3 flex flex-wrap items-start gap-2">
+      <button #basemapTrigger type="button" class="btn pointer-events-auto shadow-sheet" popovertarget="basemap-sheet">
+        <app-icon name="layers" />
+        <span>Mapa: {{ basemap().label }}</span>
+        <app-icon name="chevron-down" />
+      </button>
+
+      <div class="pointer-events-auto flex shadow-sheet" role="group" aria-label="Qué colorea el mapa">
+        <button type="button" class="btn rounded-r-none" [attr.aria-pressed]="overlay() === 'regions'" (click)="overlay.set('regions')">
+          Por región
+        </button>
+        <button type="button" class="btn -ml-px rounded-l-none" [attr.aria-pressed]="overlay() === 'cells'" (click)="overlay.set('cells')">
+          Por celdas
+        </button>
+      </div>
+
+      <div class="pointer-events-auto flex items-center rounded-sheet border border-rule-strong bg-paper shadow-sheet"
+           role="group" aria-label="Día mostrado">
+        <button type="button" class="btn btn-icon border-0" aria-label="Día anterior" [disabled]="!selection.date()" (click)="stepDay(-1)">
+          <app-icon name="chevron-left" />
+        </button>
+        <span class="type-narrow min-w-40 px-1 text-center text-sm font-semibold" aria-live="polite">{{ dateTitle() }}</span>
+        <button type="button" class="btn btn-icon border-0" aria-label="Día siguiente" [disabled]="!selection.date()" (click)="stepDay(1)">
+          <app-icon name="chevron-right" />
+        </button>
+        <button type="button" class="btn rounded-l-none border-y-0 border-r-0" [attr.aria-pressed]="playing()" (click)="togglePlayback()">
+          <app-icon [name]="playing() ? 'pause' : 'play'" />
+          {{ playing() ? 'Pausar' : 'Reproducir' }}
+        </button>
+      </div>
+    </div>
+
+    <div #basemapSheet id="basemap-sheet" popover [appAnchoredPopover]="basemapTrigger" class="sheet-popover w-72 p-1.5">
+      @for (option of basemaps; track option.id) {
+        <button type="button"
+                class="flex w-full flex-col rounded-sheet px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-paper-2 aria-pressed:bg-accent-wash"
+                [attr.aria-pressed]="option.id === basemapId()"
+                (click)="chooseBasemap(option.id, basemapSheet)">
+          <span class="font-semibold">{{ option.label }}</span>
+          <span class="text-[0.8125rem] text-ink-2">{{ option.description }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="absolute bottom-3 left-3 hidden max-w-80 rounded-sheet border border-rule-strong bg-paper px-3 py-2 shadow-sheet sm:block">
+      <ng-container [ngTemplateOutlet]="legend" />
+    </div>
+  </section>
+
+  <!-- ── Almanaque del año ────────────────────────────────────────── -->
+  <aside class="border-ink bg-paper lg:overflow-y-auto lg:border-l-[1.5px]" aria-label="Almanaque del año">
+    <div class="border-b border-rule bg-paper-2 px-4 py-3 sm:hidden">
+      <ng-container [ngTemplateOutlet]="legend" />
+    </div>
+
+    <div class="px-4 pt-4 pb-4 lg:px-5">
+      <div class="flex items-end justify-between gap-3">
+        <h1 class="type-wide min-w-0 text-xl leading-none font-extrabold uppercase">{{ selection.regionName() }}</h1>
+        <div class="flex flex-none items-center gap-1">
+          <button type="button" class="btn btn-icon" aria-label="Año anterior"
+                  [disabled]="selection.year() <= selection.firstYear()" (click)="stepYear(-1)">
+            <app-icon name="chevron-left" />
+          </button>
+          <span class="type-narrow w-16 text-center text-3xl leading-none font-extrabold" aria-live="polite">{{ selection.year() }}</span>
+          <button type="button" class="btn btn-icon" aria-label="Año siguiente"
+                  [disabled]="selection.year() >= selection.lastYear()" (click)="stepYear(1)">
+            <app-icon name="chevron-right" />
+          </button>
+        </div>
+      </div>
+
+      <app-year-planner class="mt-4"
+        [year]="selection.year()"
+        [days]="days()"
+        [selectedDate]="selection.date()"
+        (daySelect)="selection.selectDate($event)" />
+
+      <app-level-legend class="mt-3" [labels]="dayLabels" />
+    </div>
+
+    <div #sheet class="border-t-[1.5px] border-ink px-4 py-4 lg:px-5">
+      @if (selectedHotspot(); as hotspot) {
+        <app-hotspot-sheet [hotspot]="hotspot" (zoomIn)="zoomToHotspot()" (close)="selectedHotspotId.set(undefined)" />
+      } @else if (selectedDay(); as day) {
+        <app-day-sheet [day]="day" [hotspots]="hotspotPage.value()" [hotspotsLoading]="hotspotPage.isLoading()" />
+        <button type="button" class="btn mt-3" (click)="selection.clearDate()">Volver al año completo</button>
+      } @else {
+        <h2 class="section-title">El año {{ selection.year() }} en {{ selection.regionName() }}</h2>
+        <table class="ledger mt-2">
+          <tbody>
+            <tr>
+              <td>Índice armonizado del año</td>
+              <td class="num text-base font-bold">{{ yearSummary() ? formatIndex(yearSummary()!.harmonizedIndex) : '—' }}</td>
+            </tr>
+            <tr>
+              <td>Días críticos</td>
+              <td class="num">{{ yearSummary() ? formatInteger(yearSummary()!.criticalDays) : '—' }}</td>
+            </tr>
+            <tr>
+              <td>Día más intenso</td>
+              <td class="num">
+                @if (peakDay(); as peak) {
+                  <button type="button" class="font-semibold underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+                          (click)="selection.selectDate(peak.date)">
+                    {{ formatShortDate(peak.date) }} · {{ formatIndex(peak.harmonizedIndex) }}
+                  </button>
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        @if (children.value().length > 0) {
+          <h2 class="section-title mt-6 mb-1">Dónde se concentró</h2>
+          <app-region-ranking
+            [regions]="children.value()"
+            [activity]="activity()"
+            [limit]="rankingRows"
+            (regionSelect)="selection.selectRegion($event)"
+            (peakSelect)="selection.selectDate($event)" />
+        }
+      }
+    </div>
+  </aside>
+
+  <!-- ── Tira de años ─────────────────────────────────────────────── -->
+  <footer class="border-t-[1.5px] border-ink bg-paper-2 px-4 pt-2 pb-2 lg:col-span-2 lg:px-6">
+    <app-year-strip [years]="years()" [selectedYear]="selection.year()" (yearSelect)="selection.selectYear($event)" />
+  </footer>
+</div>

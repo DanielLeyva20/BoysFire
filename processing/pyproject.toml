@@ -11,6 +11,7 @@ dependencies = [
     "pandas>=2.2",
     "numpy>=1.26",
     "h3>=4.1",
+    "shapely>=2.1",
     "pyodbc>=5.1",
     "python-dotenv>=1.0",
 ]

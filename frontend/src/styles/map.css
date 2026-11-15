@@ -1,0 +1,79 @@
+/* MapLibre trae su propia hoja de estilos; aquí se lleva al sistema del almanaque. */
+.maplibregl-map {
+  font-family: var(--font-sans);
+}
+
+.maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-sheet);
+  background: var(--color-paper);
+  box-shadow: var(--shadow-sheet) !important;
+}
+
+.maplibregl-ctrl-group button {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-rule);
+}
+
+.maplibregl-ctrl-attrib {
+  background: oklch(0.985 0.004 250 / 0.86) !important;
+  color: var(--color-ink-2);
+  font-size: 0.6875rem;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--color-ink-2);
+}
+
+.maplibregl-ctrl-scale {
+  border-color: var(--color-ink);
+  background: oklch(0.985 0.004 250 / 0.86);
+  color: var(--color-ink);
+  font-size: 0.6875rem;
+  font-stretch: 85%;
+}
+
+/* Etiqueta flotante al pasar sobre una región o una celda */
+.maplibregl-popup-content {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-sheet);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  box-shadow: var(--shadow-sheet);
+}
+
+.maplibregl-popup-tip {
+  display: none;
+}
+
+/* Marca del punto de mayor actividad: un anillo, no un punto brillante */
+.peak-marker {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 2px solid var(--color-paper);
+  border-radius: 50%;
+  background: transparent;
+  box-shadow:
+    0 0 0 2px var(--color-ink),
+    inset 0 0 0 2px var(--color-ink);
+  cursor: pointer;
+}
+
+.peak-marker::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--color-ink);
+  transform: translate(-50%, -50%);
+}
