@@ -23,5 +23,20 @@ export const routes: Routes = [
     title: 'Estadísticas · BoysFire',
     loadComponent: () => import('./features/stats/stats-page').then((module) => module.StatsPage),
   },
+  {
+    path: 'prevencion',
+    title: 'Prevención · BoysFire',
+    loadComponent: () => import('./features/prevention/prevention-page').then((module) => module.PreventionPage),
+  },
+  {
+    path: 'reportar',
+    title: 'Reportar humo o fuego · BoysFire',
+    loadComponent: () => import('./features/report/report-page').then((module) => module.ReportPage),
+  },
+  {
+    path: 'monitoreo',
+    title: 'Monitoreo · BoysFire',
+    loadComponent: () => import('./features/monitoring/monitoring-page').then((module) => module.MonitoringPage),
+  },
   { path: '**', redirectTo: '' },
 ];

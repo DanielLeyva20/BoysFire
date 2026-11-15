@@ -13,6 +13,8 @@ from boysfire.db.ingest_repository import RAW_COLUMNS
 
 # El CSV NRT no trae la columna "type"; el resto es obligatorio.
 _OPTIONAL_COLUMNS = frozenset({"type"})
+# La API casi en tiempo real usa los nombres de banda de VIIRS; el archivo, los genéricos.
+_COLUMN_ALIASES = {"bright_ti4": "brightness", "bright_ti5": "bright_t31"}
 _TEXT_COLUMNS = ("acq_time", "satellite", "instrument", "confidence", "version", "daynight")
 
 
@@ -55,6 +57,7 @@ def sha256_of(content: bytes) -> str:
 def parse(content: bytes) -> pd.DataFrame:
     """Convierte el CSV en un DataFrame con las columnas de ``ingest.raw_hotspot``."""
     frame = pd.read_csv(io.BytesIO(content), dtype={name: "string" for name in _TEXT_COLUMNS})
+    frame = frame.rename(columns=_COLUMN_ALIASES)
 
     missing = set(RAW_COLUMNS) - set(frame.columns) - _OPTIONAL_COLUMNS
     if missing:

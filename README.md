@@ -285,7 +285,63 @@ Spring Boot 4 · Java 25 · solo lectura. Documentación interactiva en `http://
 - `bbox` es `minLon,minLat,maxLon,maxLat`. Las fechas son `AAAA-MM-DD`, en hora de Perú.
 - Los errores llegan como `application/problem+json` con un mensaje en `detail`.
 
-Pendiente: eventos, alertas (REST y WebSocket), riesgo y reporte ciudadano.
+Pendiente: eventos de incendio (agrupamiento de focos).
+
+---
+
+## 8b. Prevención, reportes, alertas y monitoreo (implementado)
+
+**Riesgo por zona.** Cada 3 horas la API pide el clima de las 195 provincias a Open-Meteo y suma puntos por
+factor: vientos fuertes, vegetación seca (días sin lluvia), aire seco, calor, temporada de quemas y focos
+recientes. Nivel: bajo (0–2), moderado (3–5) o alto (6–11). Los distritos usan el clima de su provincia;
+departamentos y país se resumen de sus provincias. Cada nivel y factor trae sus recomendaciones
+(tabla `ref.recommendation`). Es un indicador por reglas, no una predicción.
+
+**Reportes comunitarios.** Cualquier persona marca en el mapa humo, fuego o una quema. El reporte se ubica en su
+distrito, se contrasta con los focos de satélite cercanos y abre una alerta. Límite de 5 reportes cada 10 minutos
+por persona.
+
+**Alertas.** Nacen de tres reglas: provincia en riesgo alto, provincia con muchos focos recientes, o un reporte.
+Se envían a los responsables de la zona (y de las zonas que la contienen o contiene) y se registra cada envío,
+cada respuesta y cada cambio de estado (abierta → notificada → en verificación → confirmada/descartada → cerrada).
+
+**Telegram.** Con `TELEGRAM_BOT_TOKEN` en el `.env`, las alertas llegan al celular con botones de respuesta
+(Recibido, Voy a verificar, Confirmo, Falsa alarma) y el responsable enlaza su cuenta enviando `/start CÓDIGO`.
+Sin token, cada envío queda registrado como **simulado**, con el motivo.
+
+**Focos casi en tiempo real (NASA FIRMS).** Con `FIRMS_MAP_KEY` en el `.env`:
+
+```bash
+cd processing
+.venv\Scripts\python -m boysfire nrt            # una consulta: últimos 2 días de Perú y re-armoniza si hay nuevos
+.venv\Scripts\python -m boysfire watch          # repite cada 3 horas (opción --every en minutos)
+```
+
+Consulta MODIS, VIIRS S-NPP, NOAA-20 y NOAA-21 por país (solo Perú). Las respuestas repetidas se omiten y los
+focos duplicados se descartan en la limpieza. Mientras se re-armoniza (≈4 min) la base reemplaza las tablas y la API
+tarda en responder o devuelve vacío; al terminar vuelve sola. Conviene lanzarlo en horas de poco uso. NASA publica los focos unas 3 horas después de cada pasada del satélite.
+
+**Monitoreo.** Cada 15 minutos se revisan: frescura de los focos, clave de FIRMS, huecos de observación, fechas
+imposibles, última armonización, clima y riesgo al día, cobertura, Telegram, reportes sin revisar, alertas sin
+respuesta y provincias en riesgo alto sin responsables. Se guarda el historial.
+
+| Endpoint | Acceso | Descripción |
+|---|---|---|
+| `GET /api/risk?regionId=&date=` | Público | Riesgo de una zona: nivel, factores, recomendaciones y clima |
+| `GET /api/risk/children?parentId=&date=` | Público | Riesgo de cada zona hija |
+| `GET /api/risk/forecast?regionId=` | Público | Próximos 7 días |
+| `GET /api/risk/status` | Público | Último cálculo y fecha de los datos de focos |
+| `POST /api/reports` | Público | Enviar un reporte |
+| `GET/PATCH /api/ops/reports` | Operador | Ver y verificar reportes |
+| `GET /api/ops/alerts`, `GET /api/ops/alerts/{id}` | Operador | Alertas con envíos, respuestas e historial |
+| `PATCH /api/ops/alerts/{id}/status` | Operador | Cambiar el estado |
+| `POST /api/ops/alerts/{id}/responses` | Operador | Registrar una respuesta recibida por otro medio |
+| `POST /api/ops/alerts/{id}/dispatch` | Operador | Enviar a responsables nuevos |
+| `GET/POST/DELETE /api/ops/contacts` | Operador | Responsables de cada localidad |
+| `GET /api/ops/monitoring`, `POST /api/ops/monitoring/run` | Operador | Estado de los datos y zonas en vigilancia |
+
+Las rutas `/api/ops/**` exigen la cabecera `X-Operator-Key` con el valor de `OPERATOR_KEY` del `.env`.
+En la aplicación: páginas **Prevención**, **Reportar** y **Monitoreo** (esta última pide la clave).
 
 ---
 
@@ -297,7 +353,7 @@ Hackaton/
 ├── .env.example             # variables (copiar a .env)
 ├── db/
 │   ├── init/                # crea la base y el usuario de la aplicación
-│   └── migrations/          # V1…V6: esquemas, tablas, catálogos y vistas (Flyway)
+│   └── migrations/          # V1…V9: esquemas, tablas, catálogos y vistas (Flyway)
 ├── processing/              # Python: ingesta y armonización
 │   ├── pyproject.toml
 │   ├── src/boysfire/
@@ -320,7 +376,13 @@ Hackaton/
 │       ├── calendar/
 │       ├── hotspot/
 │       ├── mapcell/
-│       └── meta/
+│       ├── meta/
+│       ├── risk/            # clima (Open-Meteo), motor de reglas y recomendaciones
+│       ├── report/          # reportes comunitarios
+│       ├── alert/           # alertas, envíos, respuestas e historial
+│       ├── contact/         # responsables de cada localidad
+│       ├── notification/    # canales: Telegram y envío simulado
+│       └── monitoring/      # revisiones periódicas de los datos
 └── frontend/                # Aplicación web (Angular + Tailwind CSS)
     └── src/
         ├── styles/          # tema (colores, tipografía), base y componentes comunes

@@ -1,0 +1,55 @@
+<div class="grid grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+  <section aria-label="Lista de alertas">
+    <div class="mb-3 flex flex-wrap gap-1" role="group" aria-label="Filtrar alertas">
+      @for (option of filters; track option.id) {
+        <button type="button" class="btn" [attr.aria-pressed]="filter() === option.id" (click)="filter.set(option.id)">
+          {{ option.label }}
+        </button>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p role="alert" class="mb-3 border-l border-high pl-3 text-sm text-high-ink">{{ message }}</p>
+    }
+
+    <ul class="divide-y divide-rule border-y-[1.5px] border-ink">
+      @for (alert of visible(); track alert.id) {
+        <li>
+          <button type="button"
+                  class="flex w-full items-start gap-3 px-2 py-2.5 text-left transition-colors duration-150 hover:bg-paper-2 aria-pressed:bg-accent-wash"
+                  [attr.aria-pressed]="selectedId() === alert.id"
+                  (click)="select(alert.id)">
+            <span class="level-mark mt-1.5" [attr.data-level]="riskToLevel[alert.level]"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold">{{ alert.title }}</span>
+              <span class="block text-[0.8125rem] text-ink-2">{{ alert.place }} · {{ formatTime(alert.createdAtUtc) }}</span>
+            </span>
+            <span class="flex flex-none flex-col items-end gap-1">
+              <span class="tag"><span class="level-mark" [attr.data-level]="statusLevel[alert.status]"></span>{{ alert.statusLabel }}</span>
+              <span class="type-narrow text-[0.75rem] text-ink-3">{{ alert.deliveries }} envíos · {{ alert.responses }} resp.</span>
+            </span>
+          </button>
+        </li>
+      } @empty {
+        <li class="px-2 py-6 text-sm text-ink-2">
+          @if (loaded()) {
+            No hay alertas en esta vista. Las alertas nacen del cálculo de riesgo (cada 3 horas), de los focos activos y de
+            los reportes de la comunidad.
+          } @else {
+            Cargando alertas…
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section aria-label="Alerta elegida">
+    @if (detail(); as alert) {
+      <app-alert-detail [detail]="alert" (updated)="onUpdated($event)" />
+    } @else {
+      <div class="rounded-sheet border border-dashed border-rule-strong px-5 py-10 text-center text-ink-2">
+        Elige una alerta para ver a quién se envió, qué respondieron y para coordinar su verificación.
+      </div>
+    }
+  </section>
+</div>

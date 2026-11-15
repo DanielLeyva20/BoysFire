@@ -24,6 +24,21 @@ class RunRepository:
         finally:
             cursor.close()
 
+    def harmonization_is_stale(self) -> bool:
+        """``True`` si hay focos cargados después de la última armonización exitosa (o nunca se armonizó)."""
+        cursor = self._connection.cursor()
+        try:
+            cursor.execute(
+                """
+                SELECT CASE WHEN (SELECT MAX(loaded_at) FROM ingest.ingest_batch) >
+                                 COALESCE((SELECT MAX(finished_at) FROM ingest.pipeline_run WHERE status = 'SUCCESS'), '1900-01-01')
+                            THEN 1 ELSE 0 END
+                """
+            )
+            return bool(cursor.fetchone()[0])
+        finally:
+            cursor.close()
+
     def finish(self, run_id: int, metrics: Mapping[str, float]) -> None:
         cursor = self._connection.cursor()
         try:

@@ -90,3 +90,13 @@ export function formatPeruTime(utcDateTime: string): string {
   const utc = new Date(`${utcDateTime}Z`);
   return TIME.format(new Date(utc.getTime() + PERU_UTC_OFFSET_HOURS * 3_600_000));
 }
+
+const DATE_TIME = new Intl.DateTimeFormat('es-PE', {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC',
+});
+
+/** "15 nov, 13:07" en hora de Perú, a partir de un instante UTC sin zona ("2026-11-15T18:07:00"). */
+export function formatPeruDateTime(utcDateTime: string): string {
+  const utc = new Date(`${utcDateTime}Z`);
+  return DATE_TIME.format(new Date(utc.getTime() + PERU_UTC_OFFSET_HOURS * 3_600_000)).replace('.', '');
+}

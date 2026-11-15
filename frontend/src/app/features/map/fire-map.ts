@@ -6,7 +6,6 @@ import type { FeatureCollection } from 'geojson';
 import { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker, NavigationControl, Popup, RasterTileSource, ScaleControl } from 'maplibre-gl';
 
 import { IsoDate } from '../../core/api/models';
-import { formatIndex } from '../../core/domain/format';
 import { BASEMAPS, BasemapId, basemapOf, tilesFor } from './basemaps';
 import { Bounds, PERU_BOUNDS, regionLabelPoints } from './map-features';
 import { FILL_OPACITY, LAYER, SOURCE, basemapLayerId, buildStyle, inkFor } from './map-style';
@@ -51,6 +50,8 @@ export class FireMap {
   readonly regionClick = output<number>();
   readonly hotspotClick = output<number>();
   readonly peakClick = output<void>();
+  /** Cualquier clic en el mapa, con su posición. */
+  readonly pointClick = output<{ longitude: number; latitude: number }>();
 
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
   private readonly ready = signal(false);
@@ -163,6 +164,7 @@ export class FireMap {
   /** Un clic elige primero el foco (lo más fino); si no hay foco bajo el cursor, la región. */
   private listenToPointer(): void {
     this.map.on('click', (event) => {
+      this.pointClick.emit({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
       const [hotspot] = this.map.queryRenderedFeatures(event.point, { layers: [LAYER.hotspot] });
       if (hotspot) {
         this.hotspotClick.emit(Number(hotspot.properties['id']));
@@ -189,7 +191,7 @@ export class FireMap {
       return;
     }
     const label = document.createElement('span');
-    label.textContent = `${properties['name']} · índice ${formatIndex(Number(properties['index']))}`;
+    label.textContent = String(properties['label'] ?? properties['name']);
     this.hoverLabel.setLngLat(event.lngLat).setDOMContent(label).addTo(this.map);
   }
 

@@ -1,0 +1,134 @@
+<div class="grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-10 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+  <section aria-labelledby="contacts-title">
+    <h2 id="contacts-title" class="section-title">Responsables activos</h2>
+    <p class="mt-1 mb-2 text-sm text-ink-2">
+      Para recibir alertas en el celular, cada persona abre el bot de Telegram y envía <code>/start</code> con su código.
+    </p>
+    <div class="relative overflow-x-auto">
+      <table class="ledger min-w-[44rem]">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Zona</th>
+            <th scope="col">Teléfono</th>
+            <th scope="col">Telegram</th>
+            <th scope="col"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (contact of contacts(); track contact.id) {
+            <tr>
+              <td>
+                <span class="block font-semibold">{{ contact.fullName }}</span>
+                <span class="block text-[0.8125rem] text-ink-2">
+                  {{ contact.roleName }} · {{ contact.kind === 'AUTHORITY' ? 'Autoridad' : 'Comunidad' }}
+                </span>
+              </td>
+              <td>{{ contact.place }}</td>
+              <td class="whitespace-nowrap">{{ contact.phone ?? '—' }}</td>
+              <td>
+                @if (contact.telegramLinked) {
+                  <span class="tag"><span class="status-dot" data-status="OK"></span>Enlazado</span>
+                } @else if (contact.telegramLink) {
+                  <a class="text-sm font-semibold text-accent" [href]="contact.telegramLink" target="_blank" rel="noopener">
+                    Enlace de activación
+                  </a>
+                  <span class="type-narrow block text-[0.75rem] text-ink-3">código {{ contact.linkCode }}</span>
+                } @else {
+                  <span class="type-narrow text-sm font-semibold tracking-wider">/start {{ contact.linkCode }}</span>
+                }
+              </td>
+              <td class="text-right">
+                <button type="button" class="btn min-h-8 px-2 text-[0.8125rem]" (click)="deactivate(contact)">Dar de baja</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="py-6 text-ink-2">
+                {{ loaded() ? 'Aún no hay responsables. Registra al primero con el formulario.' : 'Cargando responsables…' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="new-contact-title">
+    <h2 id="new-contact-title" class="section-title">Registrar responsable</h2>
+    <form class="mt-3 space-y-4" (submit)="create($event)" novalidate>
+      <div class="relative">
+        <label class="block text-sm font-semibold" for="contact-region">Zona a su cargo</label>
+        @if (region(); as chosen) {
+          <p class="mt-1 flex items-center justify-between gap-2 rounded-sheet border border-accent bg-accent-wash px-3 py-2">
+            <span>{{ chosen.path }}</span>
+            <button type="button" class="text-sm font-semibold text-accent" (click)="region.set(null)">Cambiar</button>
+          </p>
+        } @else {
+          <input id="contact-region" type="search" class="field mt-1" autocomplete="off"
+                 placeholder="Busca un distrito, provincia o departamento"
+                 [value]="searchText()" (input)="onSearch($any($event.target).value)">
+          @if (searchText().trim().length >= 2) {
+            <ul class="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-sheet border border-rule-strong bg-paper p-1 shadow-sheet">
+              @for (match of matches.value(); track match.region.id) {
+                <li>
+                  <button type="button" class="w-full rounded-sheet px-2.5 py-1.5 text-left hover:bg-paper-2" (click)="chooseRegion(match)">
+                    {{ match.path }}
+                  </button>
+                </li>
+              } @empty {
+                <li class="px-2.5 py-2 text-sm text-ink-2">Sin coincidencias.</li>
+              }
+            </ul>
+          }
+        }
+        <p class="mt-1 text-[0.75rem] text-ink-2">Recibirá las alertas de esta zona y de las zonas que contiene.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold" for="contact-name">Nombre completo</label>
+        <input id="contact-name" class="field mt-1" maxlength="80" [value]="fullName()" (input)="fullName.set($any($event.target).value)">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold" for="contact-role">Cargo</label>
+        <input id="contact-role" class="field mt-1" maxlength="80" placeholder="Teniente gobernador, jefe de bomberos…"
+               [value]="roleName()" (input)="roleName.set($any($event.target).value)">
+      </div>
+      <fieldset>
+        <legend class="block text-sm font-semibold">Tipo</legend>
+        <div class="mt-1 flex flex-wrap gap-2">
+          @for (option of kinds; track option.value) {
+            <button type="button" class="btn" [attr.aria-pressed]="kind() === option.value" (click)="kind.set(option.value)">
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </fieldset>
+      <div>
+        <label class="block text-sm font-semibold" for="contact-phone">Teléfono (opcional)</label>
+        <input id="contact-phone" class="field mt-1" maxlength="20" inputmode="tel" placeholder="+51 999 999 999"
+               [value]="phone()" (input)="phone.set($any($event.target).value)">
+      </div>
+
+      @if (error(); as message) {
+        <p role="alert" class="border-l border-high pl-3 text-sm text-high-ink">{{ message }}</p>
+      }
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Registrando…' : 'Registrar' }}</button>
+    </form>
+
+    @if (created(); as contact) {
+      <div class="mt-5 rounded-sheet border border-rule-strong bg-paper-2 p-4" aria-live="polite">
+        <p class="font-semibold">{{ contact.fullName }} quedó registrado.</p>
+        <p class="mt-1 text-sm text-ink-2">Para activar sus alertas en Telegram, debe enviar al bot:</p>
+        <p class="type-narrow mt-2 text-lg font-bold tracking-wider">/start {{ contact.linkCode }}</p>
+        @if (contact.telegramLink) {
+          <a class="mt-1 inline-block text-sm font-semibold text-accent" [href]="contact.telegramLink" target="_blank" rel="noopener">
+            O comparte este enlace, que lo hace solo
+          </a>
+        } @else {
+          <p class="mt-1 text-[0.8125rem] text-ink-2">El bot aún no está configurado: mientras tanto, sus alertas quedan registradas como simuladas.</p>
+        }
+      </div>
+    }
+  </section>
+</div>

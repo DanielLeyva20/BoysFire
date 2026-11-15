@@ -2,6 +2,9 @@ import type { Feature, FeatureCollection, Point, Polygon, Position } from 'geojs
 import { cellToBoundary } from 'h3-js';
 
 import { Hotspot, MapCell, Region, RegionActivity, RegionFeature, RegionFeatureCollection } from '../../core/api/models';
+import { RegionRisk } from '../../core/api/risk-models';
+import { formatIndex } from '../../core/domain/format';
+import { RISK_LABELS, RISK_TO_LEVEL } from '../../core/domain/risk';
 import { Level, hotspotLevel, relativeLevels } from '../../core/domain/intensity';
 
 /** [oeste, sur, este, norte] */
@@ -10,6 +13,8 @@ export type Bounds = [number, number, number, number];
 export interface RegionProperties extends Region {
   level_: Level;
   index: number;
+  /** Texto de la etiqueta flotante al pasar sobre la región. */
+  label: string;
 }
 
 export interface CellProperties {
@@ -40,8 +45,40 @@ export function regionFeatures(
       type: 'Feature',
       id: feature.id,
       geometry: feature.geometry,
-      properties: { ...feature.properties, level_: levels[position], index: indexes[position] },
+      properties: {
+        ...feature.properties,
+        level_: levels[position],
+        index: indexes[position],
+        label: `${feature.properties.name} · índice de actividad ${formatIndex(indexes[position])}`,
+      },
     })),
+  };
+}
+
+/** Contornos de regiones coloreados por su nivel de riesgo; `index` es el puntaje. */
+export function riskRegionFeatures(
+  collection: RegionFeatureCollection,
+  risks: readonly RegionRisk[],
+): FeatureCollection<RegionFeature['geometry'], RegionProperties> {
+  const riskById = new Map(risks.map((risk) => [risk.regionId, risk]));
+  return {
+    type: 'FeatureCollection',
+    features: collection.features.map((feature) => {
+      const risk = riskById.get(feature.id);
+      return {
+        type: 'Feature',
+        id: feature.id,
+        geometry: feature.geometry,
+        properties: {
+          ...feature.properties,
+          level_: risk ? RISK_TO_LEVEL[risk.level] : 'none',
+          index: risk?.score ?? 0,
+          label: risk
+            ? `${feature.properties.name} · riesgo ${RISK_LABELS[risk.level].toLowerCase()} · ${risk.score} de 11 puntos`
+            : `${feature.properties.name} · sin evaluación`,
+        },
+      };
+    }),
   };
 }
 

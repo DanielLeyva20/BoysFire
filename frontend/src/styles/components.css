@@ -162,6 +162,121 @@
     transform: rotate(45deg) scale(0.86);
   }
 
+  /* ── Riesgo: etiqueta del nivel y bloque de un día ─────────────────── */
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-sheet);
+    background: var(--color-paper-3);
+    color: var(--color-ink);
+    font-stretch: 112%;
+    font-weight: 800;
+    font-size: 1.125rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .risk-badge[data-level="low"],
+  .week-day[data-level="low"] {
+    background: var(--color-low);
+    color: var(--color-ink);
+  }
+
+  .risk-badge[data-level="mid"],
+  .week-day[data-level="mid"] {
+    background: var(--color-mid);
+    color: var(--color-ink);
+  }
+
+  .risk-badge[data-level="high"],
+  .week-day[data-level="high"] {
+    background: var(--color-high);
+    color: var(--color-paper);
+  }
+
+  .week-day {
+    display: grid;
+    place-items: center;
+    border-radius: 2px;
+    background: var(--color-paper-3);
+    font-stretch: 85%;
+    font-weight: 700;
+  }
+
+  /* ── Indicador de datos en vivo: un pulso suave ────────────────────── */
+  .live-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--color-low-ink);
+    box-shadow: 0 0 0 0 oklch(0.4 0.1 152 / 0.5);
+    animation: live-pulse 2.4s var(--ease-out) infinite;
+  }
+
+  @keyframes live-pulse {
+    70% {
+      box-shadow: 0 0 0 6px oklch(0.4 0.1 152 / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.4 0.1 152 / 0);
+    }
+  }
+
+  /* ── Estado de una revisión o de una alerta ────────────────────────── */
+  .status-dot {
+    display: inline-block;
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background: var(--color-low);
+  }
+
+  .status-dot[data-status="WARNING"] {
+    background: var(--color-mid);
+  }
+
+  .status-dot[data-status="ERROR"] {
+    background: var(--color-high);
+  }
+
+  /* Punto del registro de una alerta: forma distinta por tipo de hecho. */
+  .timeline-dot {
+    position: absolute;
+    top: 0.3rem;
+    left: -0.3125rem;
+    width: 0.5625rem;
+    height: 0.5625rem;
+    border: 1.5px solid var(--color-ink);
+    border-radius: 50%;
+    background: var(--color-paper);
+  }
+
+  .timeline-dot[data-kind="delivery"] {
+    border-radius: 1px;
+    background: var(--color-ink);
+  }
+
+  .timeline-dot[data-kind="response"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.0625rem 0.5rem;
+    border: 1px solid var(--color-rule-strong);
+    border-radius: 999px;
+    color: var(--color-ink-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   /* ── Hoja emergente (popover nativo) ───────────────────────────────── */
   .sheet-popover {
     margin: 0;

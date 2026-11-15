@@ -82,6 +82,9 @@ class Settings:
     database: DatabaseSettings
     raw_data_dir: Path
     boundaries_dir: Path
+    firms_map_key: str = ""
+    # Días hacia atrás que se piden a FIRMS en cada consulta (1 a 10). Dos cubren el retraso de publicación.
+    firms_day_range: int = 2
     harmonization: HarmonizationSettings = field(default_factory=HarmonizationSettings)
 
 
@@ -106,4 +109,5 @@ def load_settings() -> Settings:
         database=database,
         raw_data_dir=Path(os.environ.get("RAW_DATA_DIR", data_dir / "raw")),
         boundaries_dir=Path(os.environ.get("BOUNDARIES_DIR", data_dir / "boundaries")),
+        firms_map_key=os.environ.get("FIRMS_MAP_KEY", "").strip(),
     )

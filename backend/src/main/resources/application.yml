@@ -12,7 +12,6 @@ spring:
     password: ${DB_APP_PASSWORD}
     hikari:
       maximum-pool-size: 10
-      read-only: true          # la API solo consulta; el pipeline de Python es quien escribe
   cache:
     type: caffeine
     caffeine:
@@ -21,6 +20,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  http:
+    clients:
+      connect-timeout: 10s
+      read-timeout: 30s
 
 server:
   port: ${API_PORT:8080}
@@ -42,3 +45,26 @@ boysfire:
     hotspot-max-limit: 50000
     map-cell-max-days: 366      # rango máximo al pedir celdas agregadas del mapa
     region-search-max-results: 20
+  operations:
+    # Clave que deben enviar los operadores (cabecera X-Operator-Key) para usar /api/ops/**.
+    # Sin clave, esas rutas quedan deshabilitadas.
+    operator-key: ${OPERATOR_KEY:}
+    report-rate-limit: 5          # reportes por persona (IP) …
+    report-rate-window: 10m       # … en esta ventana de tiempo
+  risk:
+    refresh-interval: 3h          # cada cuánto se renueva el clima y se recalcula el riesgo
+    refresh-initial-delay: 20s
+    forecast-days: 7
+    past-days: 30                 # historia de lluvia para contar los días secos
+    weather-batch-size: 50        # ubicaciones por consulta a Open-Meteo
+    weather-base-url: https://api.open-meteo.com/v1/forecast
+    hotspot-window-days: 3        # focos de los últimos N días cuentan como "foco detectado"
+    hotspot-max-age-days: 7       # con datos de focos más viejos, el factor no se aplica
+    active-fire-alert-detections: 10
+  monitoring:
+    interval: 15m
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    poll-interval: 4s
+    api-base-url: https://api.telegram.org
+    app-url: ${PUBLIC_APP_URL:http://localhost:4200}

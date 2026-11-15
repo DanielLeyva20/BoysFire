@@ -1,0 +1,72 @@
+<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+  <div class="flex gap-1" role="group" aria-label="Filtrar reportes">
+    <button type="button" class="btn" [attr.aria-pressed]="onlyPending()" (click)="onlyPending.set(true)">Por verificar</button>
+    <button type="button" class="btn" [attr.aria-pressed]="!onlyPending()" (click)="onlyPending.set(false)">Todos</button>
+  </div>
+  <p class="text-[0.8125rem] text-ink-2">Cada reporte abre una alerta para los responsables de su zona.</p>
+</div>
+
+@if (error(); as message) {
+  <p role="alert" class="mb-3 border-l border-high pl-3 text-sm text-high-ink">{{ message }}</p>
+}
+
+<div class="relative overflow-x-auto">
+  <table class="ledger min-w-[56rem]">
+    <thead>
+      <tr>
+        <th scope="col">Recibido</th>
+        <th scope="col">Qué</th>
+        <th scope="col">Dónde</th>
+        <th scope="col">Quién reporta</th>
+        <th scope="col">Satélite</th>
+        <th scope="col">Estado</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (report of visible(); track report.id) {
+        <tr>
+          <td class="whitespace-nowrap">{{ formatTime(report.createdAtUtc) }}</td>
+          <td>
+            <span class="font-semibold">{{ report.typeLabel }}</span>
+            @if (report.description) {
+              <span class="block max-w-[32ch] text-[0.8125rem] text-ink-2">«{{ report.description }}»</span>
+            }
+          </td>
+          <td>
+            <span class="block">{{ report.place ?? 'Fuera de los distritos' }}</span>
+            <span class="type-narrow block text-[0.75rem] text-ink-3">{{ formatCoordinates(report.latitude, report.longitude) }}</span>
+          </td>
+          <td>
+            <span class="block">{{ report.reporterName ?? 'Anónimo' }}</span>
+            @if (report.reporterContact) {
+              <span class="block text-[0.8125rem] text-ink-2">{{ report.reporterContact }}</span>
+            }
+          </td>
+          <td class="text-[0.8125rem]">{{ satelliteText(report) }}</td>
+          <td><span class="tag">{{ statusLabels[report.status] }}</span></td>
+          <td>
+            <div class="flex justify-end gap-1">
+              @for (action of actions; track action.status) {
+                <button type="button" class="btn min-h-8 px-2 text-[0.8125rem]"
+                        [disabled]="busyId() === report.id || report.status === action.status"
+                        (click)="changeStatus(report, action.status)">
+                  {{ action.label }}
+                </button>
+              }
+              @if (report.regionId !== null) {
+                <button type="button" class="btn min-h-8 px-2 text-[0.8125rem]" (click)="viewZone(report)">Ver zona</button>
+              }
+            </div>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="7" class="py-6 text-ink-2">
+            {{ loaded() ? 'No hay reportes en esta vista. Llegan desde la página «Reportar».' : 'Cargando reportes…' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,83 @@
+<p class="text-sm text-ink-2 first-letter:uppercase">{{ dayTitle() }}</p>
+
+<div class="mt-1 flex items-end justify-between gap-4">
+  <p class="flex items-center gap-2.5">
+    <span class="risk-badge" [attr.data-level]="level()">{{ levelLabel() }}</span>
+    <span class="text-sm text-ink-2">riesgo de incendio</span>
+  </p>
+  <p class="type-narrow text-right text-sm text-ink-2">
+    <strong class="text-xl text-ink">{{ risk().score }}</strong> de {{ risk().maxScore }} puntos
+  </p>
+</div>
+<div class="mt-2 h-1.5 bg-paper-3" aria-hidden="true">
+  <div class="h-full bg-ink transition-[width] duration-300" [style.width.%]="scoreWidth()"></div>
+</div>
+
+@if (risk().summary) {
+  <p class="mt-2 text-[0.8125rem] text-ink-2">
+    Puntaje de referencia de la zona: el que alcanza una de cada cuatro de sus provincias. Abajo, en cuántas provincias
+    aparece cada factor.
+  </p>
+}
+
+<h3 class="section-title mt-6 mb-1">Por qué</h3>
+@if (factors().length > 0) {
+  <ul class="divide-y divide-rule border-t-[1.5px] border-ink">
+    @for (factor of factors(); track factor.code) {
+      <li class="flex items-start justify-between gap-3 py-2">
+        <span class="min-w-0">
+          <span class="block font-semibold">{{ factor.name }}</span>
+          <span class="block text-[0.8125rem] text-ink-2">{{ factor.detail }}</span>
+        </span>
+        @if (factor.affectedShare === null) {
+          <span class="flex flex-none gap-1 pt-1.5" [attr.aria-label]="factor.points + ' puntos'">
+            @for (dot of factor.dots; track $index) {
+              <span class="h-2 w-2 rounded-full bg-ink"></span>
+            }
+          </span>
+        } @else {
+          <span class="mt-2 h-1.5 w-16 flex-none bg-paper-3" aria-hidden="true">
+            <span class="block h-full bg-ink" [style.width.%]="factor.affectedShare * 100"></span>
+          </span>
+        }
+      </li>
+    }
+  </ul>
+} @else {
+  <p class="border-t-[1.5px] border-ink pt-2 text-sm text-ink-2">
+    Ninguna condición favorece el fuego este día: hay humedad, lluvia reciente y viento moderado.
+  </p>
+}
+
+<h3 class="section-title mt-6 mb-1">Qué hacer</h3>
+<ul class="space-y-2 border-t-[1.5px] border-ink pt-2">
+  @for (recommendation of risk().recommendations; track recommendation) {
+    <li class="flex gap-2">
+      <app-icon name="arrow" class="mt-0.5 text-accent" />
+      <span>{{ recommendation }}</span>
+    </li>
+  } @empty {
+    <li class="text-sm text-ink-2">Mantener las precauciones habituales con el fuego.</li>
+  }
+</ul>
+
+@if (risk().weather; as weather) {
+  <h3 class="section-title mt-6 mb-1">Clima del día</h3>
+  <table class="ledger">
+    <tbody>
+      <tr><td>Temperatura máxima</td><td class="num">{{ formatDecimal(weather.temperatureMaxC, 1) }} °C</td></tr>
+      <tr><td>Humedad mínima</td><td class="num">{{ weather.humidityMinPct }} %</td></tr>
+      <tr><td>Viento / ráfagas</td><td class="num">{{ formatInteger(weather.windMaxKmh) }} / {{ formatInteger(weather.gustMaxKmh) }} km/h</td></tr>
+      <tr><td>Lluvia</td><td class="num">{{ formatDecimal(weather.precipitationMm, 1) }} mm</td></tr>
+      <tr><td>Días seguidos sin lluvia</td><td class="num">{{ weather.daysWithoutRain }}</td></tr>
+    </tbody>
+  </table>
+  <p class="mt-1 text-[0.8125rem] text-ink-2">Pronóstico para la provincia de {{ risk().weatherPlace }}.</p>
+} @else if (risk().summary) {
+  <p class="mt-4 text-[0.8125rem] text-ink-2">Elige una provincia en el mapa o en la lista para ver su clima.</p>
+}
+
+<p class="mt-5 border-t border-rule pt-3 text-[0.8125rem] text-ink-2">
+  Indicador por reglas con el clima de Open-Meteo y los focos de NASA FIRMS{{ hotspotDate() ? ' (datos al ' + hotspotDate() + ')' : '' }}.
+  Señala condiciones favorables al fuego; no predice incendios.
+</p>

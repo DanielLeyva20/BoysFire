@@ -1,0 +1,82 @@
+<div class="grid flex-1 grid-cols-[minmax(0,1fr)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_30rem]">
+
+  <!-- ── Mapa de riesgo ───────────────────────────────────────────── -->
+  <section class="relative h-[58dvh] min-h-96 lg:h-auto" aria-label="Mapa de riesgo">
+    <app-fire-map
+      [basemap]="basemapId()"
+      overlay="regions"
+      [regions]="regionCollection()"
+      [cells]="empty"
+      [hotspots]="empty"
+      [imageryDate]="imageryDate()"
+      [focus]="focus()"
+      (regionClick)="selection.selectRegion($event)" />
+
+    <div class="pointer-events-none absolute top-3 right-14 left-3 flex flex-wrap items-start gap-2">
+      <app-basemap-picker [(value)]="basemapId" />
+    </div>
+
+    <div class="absolute bottom-3 left-3 max-w-72 rounded-sheet border border-rule-strong bg-paper px-3 py-2 shadow-sheet">
+      <p class="mb-1 text-[0.8125rem] font-semibold">Riesgo de incendio · toca una zona para verla</p>
+      <app-level-legend [labels]="riskLegend" />
+    </div>
+  </section>
+
+  <!-- ── Riesgo de la zona ────────────────────────────────────────── -->
+  <aside class="border-ink bg-paper lg:overflow-y-auto lg:border-l-[1.5px]" aria-label="Riesgo de la zona">
+    <div class="px-4 pt-4 pb-5 lg:px-5">
+      <div class="flex items-baseline justify-between gap-3">
+        <h1 class="type-wide min-w-0 text-xl leading-none font-extrabold uppercase">{{ selection.regionName() }}</h1>
+        @if (updatedAgo(); as ago) {
+          <p class="flex flex-none items-center gap-1.5 text-[0.75rem] text-ink-2" aria-live="polite">
+            <span class="live-dot" aria-hidden="true"></span>Actualizado {{ ago }}
+          </p>
+        }
+      </div>
+
+      <h2 class="section-title mt-5 mb-2">Próximos 7 días</h2>
+      <app-risk-week [days]="forecast()" [selectedDate]="selectedDate()" (dateSelect)="chooseDate($event)" />
+
+      <div class="mt-6">
+        @if (zone(); as risk) {
+          <app-zone-risk-sheet [risk]="risk" />
+        } @else if (zoneError()) {
+          <p class="text-sm text-ink-2">
+            Todavía no hay una evaluación de riesgo para esta zona. El servidor la calcula al iniciar y cada pocas horas.
+          </p>
+        } @else {
+          <div class="space-y-3" aria-hidden="true">
+            <div class="skeleton h-10"></div>
+            <div class="skeleton h-40"></div>
+            <div class="skeleton h-28"></div>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (ranking().length > 0) {
+      <div class="border-t-[1.5px] border-ink px-4 py-4 lg:px-5">
+        <h2 class="section-title mb-1">Zonas con más riesgo</h2>
+        <ol class="divide-y divide-rule">
+          @for (item of ranking(); track item.regionId; let position = $index) {
+            <li>
+              <button type="button" class="flex w-full items-center gap-3 py-2 text-left transition-colors duration-150 hover:bg-paper-2"
+                      (click)="selection.selectRegion(item.regionId)">
+                <span class="type-narrow w-5 text-right text-ink-3">{{ position + 1 }}</span>
+                <span class="level-mark" [attr.data-level]="item.level_"></span>
+                <span class="min-w-0 flex-1 truncate font-semibold">{{ item.name }}</span>
+                <span class="text-sm text-ink-2">{{ riskLabels[item.level] }} · {{ item.score }} pts</span>
+              </button>
+            </li>
+          }
+        </ol>
+      </div>
+    }
+
+    <div class="border-t-[1.5px] border-ink bg-paper-2 px-4 py-4 lg:px-5">
+      <p class="font-semibold">¿Ves humo o fuego?</p>
+      <p class="mt-0.5 text-sm text-ink-2">Avisa a los responsables de tu zona. Si hay peligro inmediato, llama a Bomberos al 116.</p>
+      <a routerLink="/reportar" class="btn btn-primary mt-3 no-underline">Reportar humo o fuego</a>
+    </div>
+  </aside>
+</div>

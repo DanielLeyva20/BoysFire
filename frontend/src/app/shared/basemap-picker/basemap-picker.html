@@ -1,0 +1,17 @@
+<button #trigger type="button" class="btn pointer-events-auto shadow-sheet" [attr.popovertarget]="sheetId">
+  <app-icon name="layers" />
+  <span>Mapa: {{ current().label }}</span>
+  <app-icon name="chevron-down" />
+</button>
+
+<div #sheet [id]="sheetId" popover [appAnchoredPopover]="trigger" class="sheet-popover w-72 p-1.5">
+  @for (option of options; track option.id) {
+    <button type="button"
+            class="flex w-full flex-col rounded-sheet px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-paper-2 aria-pressed:bg-accent-wash"
+            [attr.aria-pressed]="option.id === value()"
+            (click)="choose(option.id, sheet)">
+      <span class="font-semibold">{{ option.label }}</span>
+      <span class="text-[0.8125rem] text-ink-2">{{ option.description }}</span>
+    </button>
+  }
+</div>

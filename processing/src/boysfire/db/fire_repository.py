@@ -48,6 +48,8 @@ class FireRepository:
     def replace_all(self, result: HarmonizationResult) -> None:
         """Reemplaza todo el modelo armonizado en una sola transacción."""
         with transaction(self._connection) as cursor:
+            # TRUNCATE es mucho más rápido que DELETE con millones de filas. Mientras dura el
+            # reemplazo (unos 4 minutos) las consultas de la API esperan; los datos no se pierden.
             for table in _TRUNCATE:
                 cursor.execute(f"TRUNCATE TABLE {table}")
             for table in _DELETE:

@@ -12,7 +12,9 @@ from boysfire.db.ingest_repository import IngestRepository
 from boysfire.db.region_repository import RegionRepository
 from boysfire.db.run_repository import RunRepository
 from boysfire.harmonize.service import harmonize
-from boysfire.ingest.raw_loader import IngestReport, load_raw_files
+from boysfire.ingest import firms_api
+from boysfire.ingest.peru_filter import PeruFilter
+from boysfire.ingest.raw_loader import IngestReport, load_api_downloads, load_raw_files
 from boysfire.regions import boundaries
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,35 @@ def run_ingest(settings: Settings) -> IngestReport:
         return report
     finally:
         connection.close()
+
+
+def run_nrt(settings: Settings) -> IngestReport:
+    """Trae de la API de FIRMS los focos recientes de Perú y, si hay nuevos, vuelve a armonizar."""
+    if not settings.firms_map_key:
+        raise RuntimeError("Falta FIRMS_MAP_KEY en el .env. Pide una gratis en https://firms.modaps.eosdis.nasa.gov/api/map_key/")
+    downloads = []
+    for source in firms_api.NRT_SOURCES:
+        try:
+            downloads.append(firms_api.fetch(settings.firms_map_key, source, settings.firms_day_range))
+        except firms_api.FirmsApiError as error:
+            logger.warning("%s", error)
+    if not downloads:
+        raise RuntimeError("Ninguna fuente de FIRMS respondió. Revisa la clave y la conexión.")
+
+    connection = connect(settings.database)
+    try:
+        CatalogRepository(connection).verify()
+        peru_filter = PeruFilter(RegionRepository(connection).read_catalog(), IngestRepository(connection))
+        report = load_api_downloads(connection, downloads, peru_filter)
+        stale = RunRepository(connection).harmonization_is_stale()
+    finally:
+        connection.close()
+    logger.info("FIRMS: %d respuestas nuevas, %d focos cargados", report.files_loaded, report.rows_loaded)
+    if report.rows_loaded > 0 or stale:
+        run_harmonize(settings)
+    else:
+        logger.info("Sin focos nuevos ni armonización pendiente.")
+    return report
 
 
 def run_regions(settings: Settings) -> int:

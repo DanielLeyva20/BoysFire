@@ -35,11 +35,7 @@
 
     <!-- Controles: mapa base, qué se colorea y el día -->
     <div class="pointer-events-none absolute top-3 right-14 left-3 flex flex-wrap items-start gap-2">
-      <button #basemapTrigger type="button" class="btn pointer-events-auto shadow-sheet" popovertarget="basemap-sheet">
-        <app-icon name="layers" />
-        <span>Mapa: {{ basemap().label }}</span>
-        <app-icon name="chevron-down" />
-      </button>
+      <app-basemap-picker [(value)]="basemapId" />
 
       <div class="pointer-events-auto flex shadow-sheet" role="group" aria-label="Qué colorea el mapa">
         <button type="button" class="btn rounded-r-none" [attr.aria-pressed]="overlay() === 'regions'" (click)="overlay.set('regions')">
@@ -66,17 +62,6 @@
       </div>
     </div>
 
-    <div #basemapSheet id="basemap-sheet" popover [appAnchoredPopover]="basemapTrigger" class="sheet-popover w-72 p-1.5">
-      @for (option of basemaps; track option.id) {
-        <button type="button"
-                class="flex w-full flex-col rounded-sheet px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-paper-2 aria-pressed:bg-accent-wash"
-                [attr.aria-pressed]="option.id === basemapId()"
-                (click)="chooseBasemap(option.id, basemapSheet)">
-          <span class="font-semibold">{{ option.label }}</span>
-          <span class="text-[0.8125rem] text-ink-2">{{ option.description }}</span>
-        </button>
-      }
-    </div>
 
     <div class="absolute bottom-3 left-3 hidden max-w-80 rounded-sheet border border-rule-strong bg-paper px-3 py-2 shadow-sheet sm:block">
       <ng-container [ngTemplateOutlet]="legend" />

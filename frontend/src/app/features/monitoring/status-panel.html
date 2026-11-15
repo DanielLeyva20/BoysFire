@@ -1,0 +1,67 @@
+<div class="grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <section aria-labelledby="watchlist-title">
+    <h2 id="watchlist-title" class="section-title">Zonas en vigilancia hoy</h2>
+    <p class="mt-1 mb-2 text-sm text-ink-2">
+      Provincias con riesgo moderado o alto, de mayor a menor. Una zona sin responsables no recibirá las alertas.
+    </p>
+    <div class="relative overflow-x-auto">
+    <table class="ledger min-w-[34rem]">
+      <thead>
+        <tr>
+          <th scope="col">Provincia</th>
+          <th scope="col">Riesgo</th>
+          <th scope="col" class="num">Responsables</th>
+          <th scope="col"><span class="sr-only">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of overview().watchlist; track item.regionId) {
+          <tr>
+            <td class="font-semibold">{{ item.place }}</td>
+            <td class="whitespace-nowrap">
+              <span class="flex items-center gap-1.5">
+                <span class="level-mark" [attr.data-level]="riskToLevel[item.level]"></span>{{ riskLabels[item.level] }} · {{ item.score }}
+              </span>
+            </td>
+            <td class="num" [class.text-high-ink]="item.contacts === 0" [class.font-bold]="item.contacts === 0">{{ item.contacts }}</td>
+            <td>
+              <div class="flex justify-end gap-1">
+                <button type="button" class="btn min-h-8 px-2 text-[0.8125rem]" (click)="viewZone(item.regionId)">Ver</button>
+                @if (item.contacts === 0) {
+                  <button type="button" class="btn min-h-8 px-2 text-[0.8125rem]" (click)="registerContact.emit(item.regionId)">Registrar responsable</button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="4" class="py-6 text-ink-2">Hoy ninguna provincia tiene riesgo moderado o alto.</td></tr>
+        }
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="checks-title">
+    <h2 id="checks-title" class="section-title">Estado de los datos</h2>
+    <p class="mt-1 mb-2 text-sm text-ink-2">
+      Revisiones automáticas cada 15 minutos: satélites, clima, consistencia y atención de los avisos.
+      @if (problems() > 0) {
+        <strong class="text-ink">{{ problems() }} requieren atención.</strong>
+      }
+    </p>
+    <ul class="divide-y divide-rule border-y-[1.5px] border-ink">
+      @for (check of overview().checks; track check.code) {
+        <li class="flex gap-3 py-2.5">
+          <span class="status-dot mt-1.5" [attr.data-status]="check.status" [attr.aria-label]="check.status"></span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-semibold">{{ check.title }}</span>
+            <span class="block text-[0.8125rem] text-ink-2">{{ check.message }}</span>
+          </span>
+          @if (check.checkedAtUtc) {
+            <span class="type-narrow flex-none text-[0.75rem] text-ink-3">{{ formatTime(check.checkedAtUtc) }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+</div>

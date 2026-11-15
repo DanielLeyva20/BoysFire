@@ -1,0 +1,65 @@
+<div class="mx-auto w-full max-w-[96rem] px-4 py-6 lg:px-8">
+  @if (session.signedIn() && overview(); as data) {
+    <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div>
+        <h1 class="type-wide text-2xl leading-tight font-extrabold uppercase">Centro de monitoreo</h1>
+        <p class="mt-1 text-ink-2">
+          <strong class="text-ink">{{ data.counters.pendingAlerts }}</strong> alertas por atender ·
+          <strong class="text-ink">{{ data.counters.pendingReports }}</strong> reportes por verificar ·
+          <strong class="text-ink">{{ data.counters.activeContacts }}</strong> responsables activos
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn" (click)="refresh()">Actualizar</button>
+        <button type="button" class="btn" (click)="runChecks()">Revisar los datos ahora</button>
+        <button type="button" class="btn" (click)="signOut()">Salir</button>
+      </div>
+    </div>
+
+    <div class="mt-6 flex gap-1 overflow-x-auto border-b-[1.5px] border-ink" role="tablist" aria-label="Secciones del monitoreo">
+      @for (item of tabs; track item.id) {
+        <button type="button" role="tab"
+                class="type-narrow -mb-[1.5px] border-b-[3px] border-transparent px-3 py-2 text-[0.9375rem] font-semibold whitespace-nowrap text-ink-2 transition-colors duration-150 hover:text-ink aria-selected:border-ink aria-selected:text-ink"
+                [attr.aria-selected]="tab() === item.id"
+                (click)="tab.set(item.id)">
+          {{ item.label }}
+        </button>
+      }
+    </div>
+
+    <div class="mt-6" role="tabpanel">
+      @switch (tab()) {
+        @case ('alerts') {
+          <app-alerts-panel [refreshKey]="refreshKey()" (changed)="refresh()" />
+        }
+        @case ('reports') {
+          <app-reports-panel [refreshKey]="refreshKey()" (changed)="refresh()" />
+        }
+        @case ('status') {
+          <app-status-panel [overview]="data" (registerContact)="registerContactFor($event)" />
+        }
+        @case ('contacts') {
+          <app-contacts-panel [refreshKey]="refreshKey()" [suggestedRegionId]="suggestedRegionId()" (changed)="refresh()" />
+        }
+      }
+    </div>
+  } @else {
+    <div class="mx-auto mt-6 max-w-md">
+      <h1 class="type-wide text-2xl leading-tight font-extrabold uppercase">Centro de monitoreo</h1>
+      <p class="mt-2 text-ink-2">
+        Acceso para operadores: alertas, reportes de la comunidad, responsables y estado de los datos. La clave está en
+        el archivo <code>.env</code> del servidor (OPERATOR_KEY).
+      </p>
+      <form class="mt-5" (submit)="signIn($event, keyField.value)">
+        <label class="block text-sm font-semibold" for="operator-key">Clave de operador</label>
+        <input #keyField id="operator-key" type="password" class="field mt-1" autocomplete="current-password">
+        @if (accessError(); as message) {
+          <p role="alert" class="mt-3 border-l border-high pl-3 text-sm text-high-ink">{{ message }}</p>
+        }
+        <button type="submit" class="btn btn-primary mt-4" [disabled]="signingIn()">
+          {{ signingIn() ? 'Entrando…' : 'Entrar' }}
+        </button>
+      </form>
+    </div>
+  }
+</div>

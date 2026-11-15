@@ -4,17 +4,18 @@ import {
 } from '@angular/core';
 
 import { FireApi } from '../../core/api/fire-api';
-import { CalendarDay, DateRange, Hotspot, RegionFeatureCollection } from '../../core/api/models';
+import { CalendarDay, DateRange, Hotspot } from '../../core/api/models';
 import { addDays, formatLongDate, formatShortDate, yearRange } from '../../core/domain/dates';
 import { formatIndex, formatInteger } from '../../core/domain/format';
 import { DAY_LEVEL_LABELS, HOTSPOT_LEVEL_LABELS, RELATIVE_LEVEL_LABELS } from '../../core/domain/intensity';
 import { SelectionStore } from '../../core/state/selection-store';
 import { settled } from '../../core/state/settled';
+import { selectedRegionOutlines } from '../../core/state/region-outlines';
+import { BasemapPicker } from '../../shared/basemap-picker/basemap-picker';
 import { Icon } from '../../shared/icon/icon';
 import { LevelLegend } from '../../shared/level-legend/level-legend';
-import { AnchoredPopover } from '../../shared/popover/anchored-popover';
 import { RegionRanking } from '../../shared/region-ranking/region-ranking';
-import { BASEMAPS, BasemapId, DEFAULT_BASEMAP, basemapOf } from './basemaps';
+import { BasemapId, DEFAULT_BASEMAP } from './basemaps';
 import { DaySheet } from './day-sheet';
 import { FireMap, Overlay, PeakMark } from './fire-map';
 import { HotspotSheet } from './hotspot-sheet';
@@ -33,7 +34,7 @@ const RANKING_ROWS = 8;
 @Component({
   selector: 'app-map-page',
   imports: [
-    FireMap, YearPlanner, YearStrip, DaySheet, HotspotSheet, RegionRanking, LevelLegend, Icon, AnchoredPopover,
+    FireMap, YearPlanner, YearStrip, DaySheet, HotspotSheet, RegionRanking, LevelLegend, Icon, BasemapPicker,
     NgTemplateOutlet,
   ],
   templateUrl: './map-page.html',
@@ -46,7 +47,6 @@ export class MapPage {
   private readonly map = viewChild.required(FireMap);
   private readonly sheet = viewChild.required<ElementRef<HTMLElement>>('sheet');
 
-  protected readonly basemaps = BASEMAPS;
   protected readonly dayLabels = DAY_LEVEL_LABELS;
   protected readonly hotspotLabels = HOTSPOT_LEVEL_LABELS;
   protected readonly relativeLabels = RELATIVE_LEVEL_LABELS;
@@ -60,7 +60,6 @@ export class MapPage {
   protected readonly selectedHotspotId = signal<number | undefined>(undefined);
   protected readonly playing = signal(false);
 
-  protected readonly basemap = computed(() => basemapOf(this.basemapId()));
 
   /** El día elegido o, si no hay, todo el año. Es lo que pintan el mapa y el ranking. */
   private readonly period = computed<DateRange>(() => {
@@ -73,10 +72,6 @@ export class MapPage {
     regionId: this.selection.regionId(),
     ...yearRange(this.selection.year()),
   }));
-  private readonly childrenGeometry = this.api.childrenGeometry(this.selection.regionId);
-  private readonly ownGeometry = this.api.regionGeometry(() =>
-    this.selection.region()?.region.level === 'DISTRICT' ? this.selection.regionId() : undefined,
-  );
   private readonly activityResource = this.api.childrenActivity(() => ({
     parentId: this.selection.regionId(),
     ...this.period(),
@@ -92,11 +87,7 @@ export class MapPage {
 
   // ── Lo que dibuja el mapa ────────────────────────────────────────────
   /** Las regiones hijas; un distrito no tiene, así que se muestra su propio contorno. */
-  private readonly outlines = computed<RegionFeatureCollection>(() => {
-    const children = this.childrenGeometry.value();
-    const own = this.ownGeometry.value();
-    return children.features.length === 0 && own ? { type: 'FeatureCollection', features: [own] } : children;
-  });
+  private readonly outlines = selectedRegionOutlines();
 
   protected readonly regionCollection = computed(() => regionFeatures(this.outlines(), this.activity()));
   protected readonly cellCollection = computed(() => cellFeatures(this.cells()));
@@ -186,10 +177,6 @@ export class MapPage {
     inject(DestroyRef).onDestroy(() => this.stopPlayback());
   }
 
-  protected chooseBasemap(id: BasemapId, sheet: HTMLElement): void {
-    this.basemapId.set(id);
-    sheet.hidePopover();
-  }
 
   protected stepYear(delta: number): void {
     this.selection.selectYear(this.selection.year() + delta);

@@ -1,0 +1,17 @@
+<div class="grid grid-cols-7 gap-1" role="group" aria-label="Riesgo de los próximos días">
+  @for (day of week(); track day.date) {
+    <button type="button"
+            class="group flex flex-col items-stretch gap-1 rounded-sheet p-1 text-center transition-colors duration-150 hover:bg-paper-2 aria-pressed:bg-accent-wash"
+            [attr.aria-pressed]="day.date === selectedDate()"
+            [attr.aria-label]="day.description"
+            [title]="day.description"
+            (click)="dateSelect.emit(day.date)">
+      <span class="type-narrow text-[0.75rem] font-semibold text-ink-2 capitalize group-aria-pressed:text-accent-strong">{{ day.weekday }}</span>
+      <span class="week-day h-8" [attr.data-level]="day.level">{{ day.dayOfMonth }}</span>
+    </button>
+  } @empty {
+    @for (placeholder of [1, 2, 3, 4, 5, 6, 7]; track placeholder) {
+      <span class="skeleton h-14" aria-hidden="true"></span>
+    }
+  }
+</div>

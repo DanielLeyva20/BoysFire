@@ -73,6 +73,22 @@ class IngestRepository:
         frame.insert(0, "batch_id", batch_id)
         return insert_frame(cursor, "ingest.raw_hotspot", frame)
 
+    def read_hotspot_keys(self, first_date: date, last_date: date) -> pd.DataFrame:
+        """Identificadores de los focos ya guardados entre dos fechas, para no repetirlos."""
+        cursor = self._connection.cursor()
+        try:
+            cursor.execute(
+                "SELECT satellite, acq_date, acq_time, CAST(latitude AS FLOAT), CAST(longitude AS FLOAT) "
+                "FROM ingest.raw_hotspot WHERE acq_date BETWEEN ? AND ?",
+                first_date, last_date,
+            )
+            keys = pd.DataFrame.from_records(cursor.fetchall(), columns=["satellite", "acq_date", "acq_time", "latitude", "longitude"])
+        finally:
+            cursor.close()
+        keys["acq_date"] = pd.to_datetime(keys["acq_date"])
+        keys[["latitude", "longitude"]] = keys[["latitude", "longitude"]].round(5)
+        return keys
+
     def read_raw_hotspots(self) -> pd.DataFrame:
         """Lee todos los focos crudos con las columnas que necesita la armonización."""
         cursor = self._connection.cursor()

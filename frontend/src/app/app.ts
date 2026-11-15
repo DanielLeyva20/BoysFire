@@ -21,8 +21,11 @@ export class App {
 
   protected readonly links: NavLink[] = [
     { path: '/', label: 'Mapa' },
+    { path: '/prevencion', label: 'Prevención' },
     { path: '/calendario', label: 'Calendario' },
     { path: '/linea-de-tiempo', label: 'Línea de tiempo' },
     { path: '/estadisticas', label: 'Estadísticas' },
+    { path: '/reportar', label: 'Reportar' },
+    { path: '/monitoreo', label: 'Monitoreo' },
   ];
 }
