@@ -36,6 +36,12 @@ export class SelectionStore {
     return detail ? [...detail.ancestors, detail.region] : [];
   });
 
+  /** Región inmediatamente superior, o undefined si ya se está en el país. */
+  readonly parentRegion = computed<Region | undefined>(() => {
+    const chain = this.regionChain();
+    return chain.length > 1 ? chain[chain.length - 2] : undefined;
+  });
+
   readonly firstYear = computed(() => yearOf(this.summary.value()?.firstDate ?? '2000-01-01'));
   readonly lastYear = computed(() => yearOf(this.summary.value()?.lastDate ?? `${new Date().getFullYear()}-01-01`));
 
@@ -53,6 +59,14 @@ export class SelectionStore {
 
   selectCountry(): void {
     this.selectedRegionId.set(COUNTRY_REGION_ID);
+  }
+
+  /** Sube un nivel en la jerarquía. No hace nada si ya se está en el país. */
+  goBack(): void {
+    const parent = this.parentRegion();
+    if (parent) {
+      this.selectedRegionId.set(parent.id);
+    }
   }
 
   /** Cambiar de año quita el día elegido: ese día ya no está a la vista. */

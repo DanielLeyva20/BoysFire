@@ -1,4 +1,14 @@
 <div class="flex min-w-0 items-center gap-1" role="group" aria-label="Región seleccionada">
+  @if (selection.parentRegion(); as parent) {
+    <button type="button"
+            class="btn btn-icon flex-none"
+            [attr.aria-label]="'Volver a ' + parent.name"
+            [title]="'Volver a ' + parent.name"
+            (click)="selection.goBack()">
+      <app-icon name="chevron-left" />
+    </button>
+  }
+
   <ol class="flex min-w-0 items-center overflow-x-auto">
     @for (region of selection.regionChain(); track region.id; let last = $last) {
       <li class="flex items-center">
