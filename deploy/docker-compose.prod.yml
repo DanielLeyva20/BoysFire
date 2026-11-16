@@ -1,0 +1,63 @@
+name: boysfire-prod
+
+# Producción en una sola VM: base de datos + API + sitio web con HTTPS automático.
+# Solo Caddy abre puertos al exterior (80 y 443); la base de datos y la API quedan internas.
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD en .env}
+      MSSQL_MEMORY_LIMIT_MB: ${MSSQL_MEMORY_LIMIT_MB:-3072}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./backup:/backup:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      DB_HOST: sqlserver
+      DB_PORT: 1433
+      DB_NAME: ${DB_NAME:-boysfire}
+      DB_APP_USER: ${DB_APP_USER:-boysfire_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?define DB_APP_PASSWORD en .env}
+      OPERATOR_KEY: ${OPERATOR_KEY:?define OPERATOR_KEY en .env}
+      PUBLIC_APP_URL: https://${SITE_ADDRESS}
+      CORS_ALLOWED_ORIGINS: https://${SITE_ADDRESS}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      JAVA_TOOL_OPTIONS: -Xmx768m -XX:+ExitOnOutOfMemoryError
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?define SITE_ADDRESS en .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../frontend/dist/frontend/browser:/srv/www:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+  caddy_data:
+  caddy_config:

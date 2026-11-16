@@ -30,3 +30,6 @@ Thumbs.db
 
 # Capturas de revisión de diseño
 .impeccable/review/
+# Producción: el respaldo de la base y las claves reales nunca se versionan.
+deploy/backup/
+deploy/hf/space/

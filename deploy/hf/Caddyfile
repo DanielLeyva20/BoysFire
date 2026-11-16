@@ -1,0 +1,19 @@
+# Hugging Face ya pone HTTPS por fuera: aquí solo HTTP en el puerto 7860.
+{
+	auto_https off
+	admin off
+}
+
+:7860 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle {
+		root * /srv/www
+		try_files {path} /index.html
+		file_server
+	}
+}

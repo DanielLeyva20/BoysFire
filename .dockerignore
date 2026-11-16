@@ -1,0 +1,3 @@
+# El contexto de construcción de la API solo necesita el .jar: lo demás (datos, node_modules…) no se envía.
+*
+!backend/target/boysfire-api-0.1.0.jar
