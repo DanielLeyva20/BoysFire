@@ -1,35 +1,56 @@
-# Secretos
+# ── Secretos y claves ───────────────────────────────────────
+# Solo se versionan las plantillas (.env.example y deploy/env.prod.example), sin valores.
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.ppk
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.claude/settings.local.json
 
-# Datos (se descargan de NASA FIRMS, no se versionan)
+# ── Datos y respaldos (pesados; se regeneran o se descargan) ─
 data/
+*.bak
+*.bacpac
+deploy/backup/
 
-# Python
+# ── Python ──────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 .venv/
 *.egg-info/
 .pytest_cache/
 
-# Java / Spring Boot
+# ── Java / Spring Boot ──────────────────────────────────────
 target/
 *.class
+*.log
 
-# Node / Angular
+# ── Node / Angular ──────────────────────────────────────────
 node_modules/
 dist/
 .angular/
 
-# Editores y sistema
+# ── Despliegue ──────────────────────────────────────────────
+# Paquete armado para Hugging Face (copia del jar, el sitio y el respaldo de la base).
+deploy/hf/space/
+
+# ── Video de presentación (pitch-video) ─────────────────────
+# Videos finales y renders: se comparten por enlace, no por git.
+pitch-video/out/
+# Fotos de prensa de terceros: no se redistribuyen en el repositorio.
+pitch-video/public/noticia*.jpg
+
+# ── Editores y sistema ──────────────────────────────────────
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Capturas de revisión de diseño
+# ── Capturas de revisión de diseño ──────────────────────────
 .impeccable/review/
-# Producción: el respaldo de la base y las claves reales nunca se versionan.
-deploy/backup/
-deploy/hf/space/
